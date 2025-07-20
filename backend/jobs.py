@@ -451,7 +451,7 @@ def clarify_topic(topic: str, hours: Optional[int] = None) -> List[str]:
         raise RuntimeError("🚫 **Permission Denied**\n\nAPI key doesn't have access to the required model.")
     except openai.APIError as e:
         logger.error(f"API error in clarify_topic: {e}")
-        error_message, is_retryable = handle_api_error(e, "topic clarification")
+        error_message, is_retryable = handle_api_error(e.response, "topic clarification")
         raise RuntimeError(error_message)
     except ProviderError as e:
         logger.error(f"Provider error: {str(e)}")
