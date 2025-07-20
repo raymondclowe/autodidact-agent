@@ -204,6 +204,210 @@ def create_user_friendly_error_message(error_info: Dict) -> str:
         return f"❌ **{provider_name} Error**\n\n{error_message}\n\n**Error Type:** {error_type}\n\n**Suggestion:** If this error persists, try switching to a different provider or contact support."
 
 
+def extract_error_details(error_obj) -> Dict:
+    """
+    Extract error details from various error object types.
+    
+    Args:
+        error_obj: Error object or exception
+        
+    Returns:
+        Dict with extracted error information
+    """
+    details = {
+        'message': None,
+        'type': None,
+        'code': None,
+        'status_code': None,
+        'request_id': None,
+        'body': None
+    }
+    
+    try:
+        # Extract basic information from the error object
+        
+        # Try to get error message from various sources
+        if hasattr(error_obj, 'message') and error_obj.message:
+            details['message'] = str(error_obj.message)
+        elif hasattr(error_obj, '__str__'):
+            error_str = str(error_obj)
+            if error_str and error_str != repr(error_obj):
+                details['message'] = error_str
+        
+        # Extract status/error codes
+        if hasattr(error_obj, 'status_code'):
+            details['status_code'] = error_obj.status_code
+        elif hasattr(error_obj, 'code'):
+            details['code'] = error_obj.code
+            
+        # Extract error type
+        if hasattr(error_obj, 'type'):
+            details['type'] = error_obj.type
+        elif hasattr(error_obj, '__class__'):
+            details['type'] = error_obj.__class__.__name__
+            
+        # Extract request ID for debugging
+        if hasattr(error_obj, 'request_id'):
+            details['request_id'] = error_obj.request_id
+            
+        # Extract body/response content
+        if hasattr(error_obj, 'body') and error_obj.body:
+            details['body'] = error_obj.body
+            # Try to parse JSON body for additional error information
+            if isinstance(error_obj.body, str):
+                try:
+                    import json
+                    body_data = json.loads(error_obj.body)
+                    if isinstance(body_data, dict) and 'error' in body_data:
+                        error_data = body_data['error']
+                        if isinstance(error_data, dict):
+                            # Use body error message if we don't have one yet
+                            if not details['message'] and error_data.get('message'):
+                                details['message'] = str(error_data['message'])
+                            if not details['type'] and error_data.get('type'):
+                                details['type'] = str(error_data['type'])
+                            if not details['code'] and error_data.get('code'):
+                                details['code'] = error_data['code']
+                except:
+                    pass
+        elif hasattr(error_obj, 'response') and hasattr(error_obj.response, 'text'):
+            details['body'] = error_obj.response.text
+            
+        # For openai.APIError specifically, try to extract more details
+        if hasattr(error_obj, '__dict__'):
+            error_dict = error_obj.__dict__
+            if 'response' in error_dict:
+                response = error_dict['response']
+                if hasattr(response, 'status_code'):
+                    details['status_code'] = response.status_code
+                if hasattr(response, 'json'):
+                    try:
+                        response_json = response.json()
+                        if isinstance(response_json, dict) and 'error' in response_json:
+                            error_data = response_json['error']
+                            if isinstance(error_data, dict):
+                                details['message'] = details['message'] or error_data.get('message')
+                                details['type'] = details['type'] or error_data.get('type')
+                                details['code'] = details['code'] or error_data.get('code')
+                    except:
+                        pass
+                        
+    except Exception as e:
+        logger.warning(f"Error extracting error details: {e}")
+    
+    return details
+
+
+def create_enhanced_error_message(error_details: Dict, context: str) -> Tuple[str, bool]:
+    """
+    Create an enhanced error message based on extracted error details.
+    
+    Args:
+        error_details: Dict with extracted error information
+        context: Context for the error
+        
+    Returns:
+        Tuple of (error_message, is_retryable)
+    """
+    message = str(error_details.get('message', '')).strip()
+    error_type = str(error_details.get('type', '')).lower()
+    status_code = error_details.get('status_code')
+    code = error_details.get('code')
+    
+    # Determine if error is retryable based on status codes and error types
+    retryable_conditions = [
+        status_code in [429, 503, 502, 504],  # Rate limit, service unavailable, bad gateway, timeout
+        'rate_limit' in error_type,
+        'timeout' in error_type,
+        'temporarily_unavailable' in error_type,
+        'service_unavailable' in error_type,
+        'rate_limit_exceeded' in error_type
+    ]
+    is_retryable = any(retryable_conditions)
+    
+    # Create user-friendly message based on status code and error type
+    if status_code == 401 or 'authentication' in error_type or 'unauthorized' in error_type:
+        error_msg = f"🔑 **Authentication Failed**\n\n"
+        error_msg += f"Your API key appears to be invalid or expired.\n\n"
+        error_msg += f"**Solution:** Check your API key configuration in settings.\n\n"
+        if message:
+            error_msg += f"**Details:** {message}"
+        return error_msg, False
+        
+    elif status_code == 403 or 'permission' in error_type or 'forbidden' in error_type:
+        error_msg = f"🚫 **Permission Denied**\n\n"
+        error_msg += f"Your API key doesn't have access to the requested resource.\n\n"
+        error_msg += f"**Solution:** Check your API key permissions or upgrade your plan.\n\n"
+        if message:
+            error_msg += f"**Details:** {message}"
+        return error_msg, False
+        
+    elif status_code == 429 or 'rate_limit' in error_type:
+        error_msg = f"⏳ **Rate Limit Exceeded**\n\n"
+        error_msg += f"Too many requests have been made recently.\n\n"
+        error_msg += f"**Solution:** Wait a few minutes and try again.\n\n"
+        if message:
+            error_msg += f"**Details:** {message}"
+        return error_msg, True
+        
+    elif status_code == 404 or 'not_found' in error_type:
+        error_msg = f"🔍 **Resource Not Found**\n\n"
+        error_msg += f"The requested model or endpoint is not available.\n\n"
+        error_msg += f"**Solution:** Check your provider settings or try a different model.\n\n"
+        if message:
+            error_msg += f"**Details:** {message}"
+        return error_msg, False
+        
+    elif status_code in [500, 502, 503, 504] or 'server_error' in error_type:
+        error_msg = f"🔧 **Server Error**\n\n"
+        error_msg += f"The AI provider is experiencing technical difficulties.\n\n"
+        error_msg += f"**Solution:** Wait a few minutes and try again. If the problem persists, try switching providers.\n\n"
+        if message:
+            error_msg += f"**Details:** {message}"
+        return error_msg, True
+        
+    elif 'timeout' in error_type or 'timeout' in message.lower():
+        error_msg = f"⏱️ **Request Timeout**\n\n"
+        error_msg += f"The request took too long to complete.\n\n"
+        error_msg += f"**Solution:** Try again, or reduce the complexity of your request.\n\n"
+        if message:
+            error_msg += f"**Details:** {message}"
+        return error_msg, True
+        
+    # Generic fallback with extracted information
+    error_msg = f"❌ **Error in {context}**\n\n"
+    
+    if message:
+        error_msg += f"**Error Message:** {message}\n\n"
+    else:
+        error_msg += f"An unexpected error occurred during {context}.\n\n"
+    
+    # Add technical details if available
+    technical_details = []
+    if error_type and error_type not in ['', 'none', 'nonetype']:
+        technical_details.append(f"Type: {error_type}")
+    if status_code:
+        technical_details.append(f"Status: {status_code}")
+    if code:
+        technical_details.append(f"Code: {code}")
+        
+    if technical_details:
+        error_msg += f"**Technical Details:** {', '.join(technical_details)}\n\n"
+    
+    # Add actionable suggestions
+    error_msg += f"**Suggestions:**\n"
+    error_msg += f"1. Wait a moment and try again\n"
+    error_msg += f"2. Check your internet connection\n"
+    error_msg += f"3. Verify your API key configuration\n"
+    
+    if is_retryable:
+        error_msg += f"4. This error may be temporary - please retry in a few minutes\n"
+    else:
+        error_msg += f"4. Try switching to a different AI provider\n"
+    
+    return error_msg, is_retryable
+
+
 def handle_api_error(response, context: str = "API call") -> Tuple[str, bool]:
     """
     Handle API errors and return user-friendly messages.
@@ -228,17 +432,14 @@ def handle_api_error(response, context: str = "API call") -> Tuple[str, bool]:
         logger.error(f"OpenRouter error in {context}: {error_info}")
         return user_message, is_retryable
     
-    # Fallback for other error types
-    if isinstance(response, dict) and 'error' in response:
-        error = response.get('error', {})
-        if isinstance(error, dict) and 'message' in error:
-            return f"❌ **Error in {context}**\n\n{error.get('message')}", False
-    elif hasattr(response, 'error'):  # for object-like responses
-        error = response.error
-        if hasattr(error, 'message'):
-            return f"❌ **Error in {context}**\n\n{error.message}", False
+    # Enhanced fallback: Extract detailed error information
+    error_details = extract_error_details(response)
     
-    return f"❌ **Unknown error in {context}**\n\nPlease try again or contact support.", False
+    # Log the extracted details for debugging
+    logger.error(f"API error in {context} - Details: {error_details}")
+    
+    # Create enhanced error message
+    return create_enhanced_error_message(error_details, context)
 
 
 def estimate_token_count(text: str) -> int:
