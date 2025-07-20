@@ -52,6 +52,7 @@ from backend.tutor_prompts import (
     TEACHING_CONTROL_SCHEMA,
     RECAP_CONTROL_SCHEMA,
     extract_control_block,
+    clean_improper_citations,
 )
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -297,11 +298,15 @@ def recap_node(state: SessionState) -> SessionState:
             raise ValueError("LLM not initialized - check API key")
             
         response = llm.invoke(messages)
-        assistant = {"role": "assistant", "content": response.content}
+        assistant_content = response.content
+        
+        # Clean up improper citations in the response
+        cleaned_content = clean_improper_citations(assistant_content, state.get("references_sections_resolved", []))
+        assistant = {"role": "assistant", "content": cleaned_content}
         print(f"[recap_node] assistant: {assistant}")
         
-        # Check control block
-        ctrl = extract_control_block(assistant["content"], RECAP_CONTROL_SCHEMA)
+        # Check control block (use original content for control extraction)
+        ctrl = extract_control_block(assistant_content, RECAP_CONTROL_SCHEMA)
         next_phase = "teaching" if ctrl and ctrl.get("prereq_complete") else "recap"
         
         # Return new state with updated history and phase
@@ -381,10 +386,16 @@ def teaching_node(state: SessionState) -> SessionState:
             raise ValueError("LLM not initialized - check API key")
             
         response = llm.invoke(messages)
-        assistant = {"role": "assistant", "content": response.content}
+        assistant_content = response.content
+        
+        # Clean up improper citations in the response
+        cleaned_content = clean_improper_citations(assistant_content, state.get("references_sections_resolved", []))
+        assistant = {"role": "assistant", "content": cleaned_content}
         print(f"[teaching_node] assistant llm call response: {response.content}")
+        print(f"[teaching_node] cleaned assistant content: {cleaned_content}")
 
-        ctrl = extract_control_block(assistant["content"], TEACHING_CONTROL_SCHEMA)
+        # Check control block (use original content for control extraction)
+        ctrl = extract_control_block(assistant_content, TEACHING_CONTROL_SCHEMA)
         if ctrl and ctrl.get("objective_complete"):
             # FIXME: when an objective has been completed, we should get a summary of the messages in that and only send a summary from then onwards
             new_objective_idx = idx + 1;

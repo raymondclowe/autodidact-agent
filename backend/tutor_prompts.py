@@ -188,6 +188,65 @@ def format_recap_prompt(
     )
 
 # ---------------------------------------------------------------------------
+# Response cleanup functions
+# ---------------------------------------------------------------------------
+
+def clean_improper_citations(text: str, refs: list[dict[str, Any]]) -> str:
+    """Clean improper citation formats from AI responses.
+    
+    Fixes raw reference IDs like [concept_mapping_design] that should be
+    properly formatted citations or removed entirely.
+    
+    Parameters
+    ----------
+    text : str
+        AI response text that may contain improper citations
+    refs : list[dict]
+        Available references with rid, title, section/loc info
+        
+    Returns
+    -------
+    str
+        Cleaned text with improper citations fixed
+    """
+    if not text or not refs:
+        return text
+    
+    # Build mapping of rid to reference info
+    rid_to_ref = {ref['rid']: ref for ref in refs}
+    
+    # Pattern to match raw rid citations like [concept_mapping_design]
+    # This should match [alphanumeric_text] that are NOT already proper citations (without §)
+    pattern = r'\[([a-zA-Z0-9_-]+)\](?!\s*§)'  # Match [rid] not followed by §
+    
+    def replace_improper_citation(match):
+        rid = match.group(1)
+        
+        # If this rid exists in our references, convert to proper citation format
+        if rid in rid_to_ref:
+            ref = rid_to_ref[rid]
+            section = ref.get('section') or ref.get('loc', '')
+            if section:
+                return f"[{rid} §{section}]"
+            else:
+                # If no section info, replace with descriptive text
+                title = ref.get('title', rid)
+                return f"research on {title}"
+        
+        # If rid not found in references, remove the improper citation entirely
+        return ""
+    
+    # Apply the replacement
+    cleaned_text = re.sub(pattern, replace_improper_citation, text)
+    
+    # Clean up artifacts from removals (e.g., empty parens, spaces before punctuation)
+    cleaned_text = re.sub(r'\s+([.,?!:;])', r'\1', cleaned_text)  # Fix space before punctuation
+    cleaned_text = re.sub(r'\(\s*\)|\[\s*\]', '', cleaned_text)      # Remove empty parens/brackets
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()        # Normalize spaces
+    
+    return cleaned_text
+
+# ---------------------------------------------------------------------------
 # Control‑block extraction + validation helper
 # ---------------------------------------------------------------------------
 

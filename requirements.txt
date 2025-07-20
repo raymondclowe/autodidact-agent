@@ -5,6 +5,7 @@ jsonschema
 python-dotenv
 Levenshtein
 langchain-openai
+langgraph
 graphviz
 pydantic
 langgraph
