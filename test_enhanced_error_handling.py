@@ -146,22 +146,22 @@ def test_model_token_limits():
     from utils.providers import get_model_token_limit
     from utils.config import set_current_provider
     
-    # Test OpenRouter Perplexity limits
+    # Test OpenRouter Perplexity limits (80% of 128k = 102,400)
     set_current_provider("openrouter")
     perplexity_limit = get_model_token_limit("perplexity/sonar-deep-research", "openrouter")
-    assert perplexity_limit == 128000, f"Expected 128000, got {perplexity_limit}"
-    print("✅ Perplexity token limit correct: 128,000")
+    assert perplexity_limit == 102400, f"Expected 102400, got {perplexity_limit}"
+    print("✅ Perplexity token limit correct: 102,400 (80% of 128k)")
     
-    # Test OpenAI limits
+    # Test OpenAI limits (80% of 128k = 102,400)
     set_current_provider("openai")
     openai_limit = get_model_token_limit("gpt-4o-mini", "openai")
-    assert openai_limit == 128000, f"Expected 128000, got {openai_limit}"
-    print("✅ OpenAI token limit correct: 128,000")
+    assert openai_limit == 102400, f"Expected 102400, got {openai_limit}"
+    print("✅ OpenAI token limit correct: 102,400 (80% of 128k)")
     
-    # Test fallback for unknown model
+    # Test fallback for unknown model (80% of 128k = 102,400)
     unknown_limit = get_model_token_limit("unknown-model", "openrouter")
-    assert unknown_limit == 128000, f"Expected fallback 128000, got {unknown_limit}"
-    print("✅ Unknown model fallback works")
+    assert unknown_limit == 102400, f"Expected fallback 102400, got {unknown_limit}"
+    print("✅ Unknown model fallback works: 102,400 (80% conservative)")
 
 
 def test_integration_scenario():

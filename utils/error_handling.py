@@ -260,7 +260,7 @@ def estimate_token_count(text: str) -> int:
     return len(text) // 4
 
 
-def check_token_limits(prompt: str, max_completion_tokens: int = None, model_max_tokens: int = 128000) -> Dict:
+def check_token_limits(prompt: str, max_completion_tokens: int = None, model_max_tokens: int = 102400) -> Dict:
     """
     Check if a prompt would exceed token limits.
     

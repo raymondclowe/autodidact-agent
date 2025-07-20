@@ -276,7 +276,7 @@ def get_model_token_limit(model: str, provider: str = None) -> int:
     config = get_provider_config(provider)
     token_limits = config.get("token_limits", {})
     
-    return token_limits.get(model, 128000)  # Default to 128k tokens
+    return token_limits.get(model, 102400)  # Default to 80% of 128k tokens (conservative)
 
 
 def list_available_models(provider: str = None) -> Dict:

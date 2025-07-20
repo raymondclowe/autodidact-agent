@@ -48,8 +48,8 @@ PROVIDER_MODELS = {
         "chat": "gpt-4o-mini",
         "base_url": None,  # Use default OpenAI base URL
         "token_limits": {
-            "o4-mini-deep-research-2025-06-26": 200000,
-            "gpt-4o-mini": 128000
+            "o4-mini-deep-research-2025-06-26": 160000,  # 80% of 200k published max
+            "gpt-4o-mini": 102400  # 80% of 128k published max
         }
     },
     "openrouter": {
@@ -57,8 +57,8 @@ PROVIDER_MODELS = {
         "chat": "anthropic/claude-3.5-haiku",
         "base_url": "https://openrouter.ai/api/v1",
         "token_limits": {
-            "perplexity/sonar-deep-research": 128000,  # Perplexity token limit from the error
-            "anthropic/claude-3.5-haiku": 200000
+            "perplexity/sonar-deep-research": 102400,  # 80% of 128k published max (conservative)
+            "anthropic/claude-3.5-haiku": 160000  # 80% of 200k published max
         }
     }
 }
