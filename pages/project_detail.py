@@ -96,6 +96,50 @@ if not project:
         st.switch_page("pages/home.py")
     st.stop()
 
+# Handle retry job request from session state
+if st.session_state.get('retry_job', False):
+    st.session_state.retry_job = False  # Clear the flag immediately
+    
+    # Get the original model from project or fallback to default
+    original_model = project.get('model_used', None)
+    
+    # Create retry text if available from old job
+    old_job_id = project.get('job_id')
+    old_job_response = check_job(old_job_id) if old_job_id else None
+    reasoning_texts = []
+    
+    # Check if old_job_response is available and extract reasoning texts
+    if old_job_response and hasattr(old_job_response, 'output') and old_job_response.output:
+        for item in old_job_response.output:
+            if item.type == "reasoning":
+                for summary in item.summary:
+                    reasoning_texts.append(summary.text)
+    
+    # Combined text for context (keeping it minimal as per original)
+    combined_text = ""
+    
+    # Get hours from project or use default
+    hours = project.get('hours', 5)
+    
+    # Start new job with original model or default
+    new_job_id = start_deep_research_job(
+        project['topic'], 
+        hours, 
+        combined_text, 
+        original_model
+    )
+    
+    # Update project with new job
+    update_project_with_job(
+        project_id=project_id,
+        job_id=new_job_id,
+        model_used=original_model,
+        status='processing'
+    )
+    
+    logger.info(f"Retry job started: {new_job_id} for project {project_id}")
+    st.rerun()
+
 # Page header
 # Use name if available, otherwise fallback to topic
 display_name = project.get('name') or project['topic']
