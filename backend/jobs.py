@@ -21,6 +21,201 @@ from utils.deep_research import TOPIC_CLARIFYING_PROMPT, TOPIC_REWRITING_PROMPT
 logger = logging.getLogger(__name__)
 
 
+def extract_citations_from_annotations(response):
+    """
+    Extract citation information from Perplexity response annotations.
+    
+    Args:
+        response: OpenAI response object with annotations
+        
+    Returns:
+        dict: Mapping of citation numbers to URL information
+    """
+    citations = {}
+    if not hasattr(response, 'choices') or not response.choices:
+        return citations
+        
+    choice = response.choices[0]
+    if not hasattr(choice, 'message') or not choice.message:
+        return citations
+        
+    annotations = getattr(choice.message, 'annotations', [])
+    if not annotations or not hasattr(annotations, '__iter__'):
+        return citations
+    
+    # Create mapping of citation indices to URLs
+    citation_index = 1
+    for annotation in annotations:
+        if hasattr(annotation, 'type') and annotation.type == 'url_citation':
+            url_citation = getattr(annotation, 'url_citation', None)
+            if url_citation:
+                citations[citation_index] = {
+                    'url': getattr(url_citation, 'url', ''),
+                    'title': getattr(url_citation, 'title', ''),
+                    'start_index': getattr(url_citation, 'start_index', 0),
+                    'end_index': getattr(url_citation, 'end_index', 0)
+                }
+                citation_index += 1
+    
+    logger.info(f"Extracted {len(citations)} citations from Perplexity response")
+    return citations
+
+
+def enhance_resources_with_citations(resources, citations, content):
+    """
+    Enhance resource entries with citation URLs from Perplexity annotations.
+    
+    Args:
+        resources: List of resource dictionaries
+        citations: Dictionary mapping citation numbers to URL info
+        content: The response content with numbered citations
+        
+    Returns:
+        list: Enhanced resources with citation URLs
+    """
+    if not citations or not resources:
+        return resources
+    
+    enhanced_resources = []
+    for resource in resources:
+        enhanced_resource = resource.copy()
+        
+        # If the resource doesn't have a URL, try to find one from citations
+        if not enhanced_resource.get('url') or enhanced_resource.get('url') == '#':
+            # Look for citation markers in the resource title or scope
+            title = enhanced_resource.get('title', '')
+            scope = enhanced_resource.get('scope', '')
+            
+            # Find citation numbers that might correspond to this resource
+            for cite_num, cite_info in citations.items():
+                cite_title = cite_info.get('title', '')
+                cite_url = cite_info.get('url', '')
+                
+                # Simple matching: if citation title appears in resource title or vice versa
+                if (cite_title and title and 
+                    (cite_title.lower() in title.lower() or title.lower() in cite_title.lower())):
+                    enhanced_resource['url'] = cite_url
+                    enhanced_resource['citation_source'] = f"Citation [{cite_num}]"
+                    logger.info(f"Enhanced resource '{title}' with citation URL: {cite_url}")
+                    break
+        
+        enhanced_resources.append(enhanced_resource)
+    
+    return enhanced_resources
+
+
+def process_perplexity_response(response, response_content):
+    """
+    Process Perplexity response to extract citations and enhance the curriculum.
+    
+    Args:
+        response: OpenAI response object
+        response_content: Raw response content string
+        
+    Returns:
+        str: Processed response content with enhanced resources
+    """
+    try:
+        # Extract citations from annotations
+        citations = extract_citations_from_annotations(response)
+        
+        # Try to parse JSON from the response content
+        curriculum_data = None
+        try:
+            # Look for JSON at the end of the content
+            lines = response_content.split('\n')
+            json_start = None
+            
+            for i, line in enumerate(lines):
+                if line.strip().startswith('```json') or line.strip() == '{':
+                    json_start = i
+                    break
+            
+            if json_start is not None:
+                # Extract the JSON part
+                if lines[json_start].strip().startswith('```json'):
+                    json_start += 1
+                
+                json_lines = []
+                for i in range(json_start, len(lines)):
+                    line = lines[i]
+                    if line.strip() == '```':
+                        break
+                    json_lines.append(line)
+                
+                json_text = '\n'.join(json_lines)
+                curriculum_data = json.loads(json_text)
+                logger.info("Successfully parsed curriculum JSON from Perplexity response")
+                
+                # Enhance resources with citations
+                if 'resources' in curriculum_data and citations:
+                    curriculum_data['resources'] = enhance_resources_with_citations(
+                        curriculum_data['resources'], citations, response_content
+                    )
+                
+                # Reconstruct the content with enhanced JSON
+                enhanced_json = json.dumps(curriculum_data, indent=2)
+                
+                # Replace the JSON part in the original content
+                new_lines = lines[:json_start]
+                new_lines.append('```json')
+                new_lines.extend(enhanced_json.split('\n'))
+                new_lines.append('```')
+                
+                enhanced_content = '\n'.join(new_lines)
+                return enhanced_content
+                
+        except (json.JSONDecodeError, IndexError) as e:
+            logger.warning(f"Could not parse JSON from Perplexity response: {e}")
+        
+        # If we have citations but couldn't parse JSON, at least log the citations
+        if citations:
+            logger.info(f"Found {len(citations)} citations in Perplexity response:")
+            for cite_num, cite_info in citations.items():
+                logger.info(f"  [{cite_num}] {cite_info['title']}: {cite_info['url']}")
+        
+        return response_content
+        
+    except Exception as e:
+        logger.error(f"Error processing Perplexity response: {e}")
+        return response_content
+
+
+def optimize_prompt_for_perplexity(base_prompt):
+    """
+    Optimize the prompt specifically for Perplexity's deep research capabilities.
+    
+    Args:
+        base_prompt: The original developer prompt
+        
+    Returns:
+        str: Optimized prompt for Perplexity
+    """
+    perplexity_additions = """
+
+PERPLEXITY-SPECIFIC INSTRUCTIONS:
+- Leverage your web search capabilities to find the most current and authoritative resources
+- Include specific publication dates and author information when available
+- Provide URLs to high-quality, accessible learning materials
+- Use your citations to support resource recommendations
+- Focus on resources that are freely accessible or widely available
+- Include recent developments and current best practices in the field
+- Ensure all URLs are functional and lead to educational content
+
+ENHANCED CITATION REQUIREMENTS:
+- When referencing sources, use numbered citations [1][2][3] in your narrative text
+- Ensure each citation corresponds to a specific, verifiable source
+- Prioritize academic papers, established educational platforms, and authoritative websites
+- Include a mix of foundational and cutting-edge resources
+
+OUTPUT FORMAT REMINDER:
+- Provide both the comprehensive curriculum explanation AND the final JSON structure
+- Ensure the JSON contains actionable learning objectives and resource pointers
+- Make sure resource URLs are real and functional"""
+
+    return base_prompt + perplexity_additions
+
+
 # Debugging infrastructure for API responses
 def save_raw_api_response(response, context: str, job_id: str = None):
     """Save raw API response to temp directory for debugging"""
@@ -627,11 +822,15 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                         base_url=client.base_url,
                         timeout=PERPLEXITY_DEEP_RESEARCH_TIMEOUT
                     )
+                    
+                    # Optimize prompt for Perplexity's deep research capabilities
+                    optimized_prompt = optimize_prompt_for_perplexity(DEVELOPER_PROMPT)
+                    
                     logger.info(f"[API CALL] Reason: Perplexity deep research | Model: {research_model} | Provider: {current_provider} | Job ID: {pseudo_job_id}")
                     response = long_timeout_client.chat.completions.create(
                         model=research_model,
                         messages=[
-                            {"role": "system", "content": DEVELOPER_PROMPT},
+                            {"role": "system", "content": optimized_prompt},
                             {"role": "user", "content": user_message}
                         ],
                         temperature=0.7,
@@ -654,6 +853,11 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                     response_content = response.choices[0].message.content
                     if not response_content:
                         raise ValueError("Invalid response structure: empty content")
+                    
+                    # Enhanced Perplexity processing: extract citations and optimize content
+                    processed_content = process_perplexity_response(response, response_content)
+                    response_content = processed_content
+                    
                     with open(temp_file, 'w') as f:
                         json.dump({
                             "status": "completed",
