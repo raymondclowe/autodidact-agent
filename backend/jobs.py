@@ -825,6 +825,9 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
 
             def run_perplexity_job():
                 try:
+                    # Optimize prompt for Perplexity's deep research capabilities
+                    optimized_prompt = optimize_prompt_for_perplexity(DEVELOPER_PROMPT)
+                    
                     # Pre-flight token check
                     full_prompt = optimized_prompt + "\n\n" + user_message
                     token_check = check_token_limits(
@@ -859,9 +862,6 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                         base_url=client.base_url,
                         timeout=PERPLEXITY_DEEP_RESEARCH_TIMEOUT
                     )
-                    
-                    # Optimize prompt for Perplexity's deep research capabilities
-                    optimized_prompt = optimize_prompt_for_perplexity(DEVELOPER_PROMPT)
                     
                     logger.info(f"[API CALL] Reason: Perplexity deep research | Model: {research_model} | Provider: {current_provider} | Job ID: {pseudo_job_id}")
                     response = long_timeout_client.chat.completions.create(
