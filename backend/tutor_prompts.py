@@ -239,8 +239,10 @@ def clean_improper_citations(text: str, refs: list[dict[str, Any]]) -> str:
     # Apply the replacement
     cleaned_text = re.sub(pattern, replace_improper_citation, text)
     
-    # Clean up any double spaces that may have resulted from removals
-    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+    # Clean up artifacts from removals (e.g., empty parens, spaces before punctuation)
+    cleaned_text = re.sub(r'\s+([.,?!:;])', r'\1', cleaned_text)  # Fix space before punctuation
+    cleaned_text = re.sub(r'\(\s*\)|\[\s*\]', '', cleaned_text)      # Remove empty parens/brackets
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()        # Normalize spaces
     
     return cleaned_text
 
