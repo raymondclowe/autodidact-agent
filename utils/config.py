@@ -40,18 +40,26 @@ PROJECTS_DIR = CONFIG_DIR / "projects"
 DEFAULT_PROVIDER = "openai"  # Default to OpenAI for backward compatibility
 SUPPORTED_PROVIDERS = ["openai", "openrouter"]
 
-# Model configurations per provider
+# Model configurations per provider with token limits
 PROVIDER_MODELS = {
     "openai": {
         "deep_research": "o4-mini-deep-research-2025-06-26",
         # "deep_research_alt": "o3-deep-research",  # Higher cost alternative
         "chat": "gpt-4o-mini",
         "base_url": None,  # Use default OpenAI base URL
+        "token_limits": {
+            "o4-mini-deep-research-2025-06-26": 160000,  # 80% of 200k published max
+            "gpt-4o-mini": 102400  # 80% of 128k published max
+        }
     },
     "openrouter": {
         "deep_research": "perplexity/sonar-deep-research",  # Perplexity Sonar Pro Deep Research
         "chat": "anthropic/claude-3.5-haiku",
         "base_url": "https://openrouter.ai/api/v1",
+        "token_limits": {
+            "perplexity/sonar-deep-research": 102400,  # 80% of 128k published max (conservative)
+            "anthropic/claude-3.5-haiku": 160000  # 80% of 200k published max
+        }
     }
 }
 
