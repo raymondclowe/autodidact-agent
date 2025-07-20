@@ -7,3 +7,4 @@ Levenshtein
 langchain-openai
 graphviz
 pydantic
+langgraph
