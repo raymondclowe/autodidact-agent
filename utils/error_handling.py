@@ -229,7 +229,11 @@ def handle_api_error(response, context: str = "API call") -> Tuple[str, bool]:
         return user_message, is_retryable
     
     # Fallback for other error types
-    if hasattr(response, 'error'):
+    if isinstance(response, dict) and 'error' in response:
+        error = response.get('error', {})
+        if isinstance(error, dict) and 'message' in error:
+            return f"❌ **Error in {context}**\n\n{error.get('message')}", False
+    elif hasattr(response, 'error'):  # for object-like responses
         error = response.error
         if hasattr(error, 'message'):
             return f"❌ **Error in {context}**\n\n{error.message}", False
