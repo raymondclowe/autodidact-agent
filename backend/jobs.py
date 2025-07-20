@@ -15,8 +15,9 @@ from pathlib import Path
 import openai
 from openai import OpenAI
 from utils.config import load_api_key, get_current_provider
-from utils.providers import create_client, get_model_for_task, get_provider_info, ProviderError, get_api_call_params
+from utils.providers import create_client, get_model_for_task, get_provider_info, ProviderError, get_api_call_params, get_model_token_limit
 from utils.deep_research import TOPIC_CLARIFYING_PROMPT, TOPIC_REWRITING_PROMPT
+from utils.error_handling import handle_api_error, check_token_limits, estimate_token_count
 
 logger = logging.getLogger(__name__)
 
@@ -444,16 +445,23 @@ def clarify_topic(topic: str, hours: Optional[int] = None) -> List[str]:
 
     except openai.AuthenticationError:
         logger.error("Authentication failed")
-        raise RuntimeError("Invalid API key. Please check your API key configuration.")
+        raise RuntimeError("🔑 **Authentication Failed**\n\nInvalid API key. Please check your API key configuration.")
     except openai.PermissionDeniedError:
         logger.error("Permission denied")
-        raise RuntimeError("API key doesn't have access to the required model.")
+        raise RuntimeError("🚫 **Permission Denied**\n\nAPI key doesn't have access to the required model.")
+    except openai.APIError as e:
+        logger.error(f"API error in clarify_topic: {e}")
+        error_message, is_retryable = handle_api_error(e, "topic clarification")
+        raise RuntimeError(error_message)
     except ProviderError as e:
         logger.error(f"Provider error: {str(e)}")
-        raise RuntimeError(f"Provider configuration error: {str(e)}")
+        raise RuntimeError(f"🔧 **Provider Configuration Error**\n\n{str(e)}")
     except Exception as e:
         logger.error(f"Clarifier API call failed: {type(e).__name__}: {str(e)}")
-        raise RuntimeError(f"Clarifier API call failed: {str(e)}")
+        if str(e).startswith("❌"):
+            raise RuntimeError(str(e))
+        else:
+            raise RuntimeError(f"❌ **Topic Clarification Failed**\n\n{str(e)}")
 
 
 def rewrite_topic(initial_topic: str, questions: List[str], user_answers: str) -> str:
@@ -817,6 +825,35 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
 
             def run_perplexity_job():
                 try:
+                    # Pre-flight token check
+                    full_prompt = optimized_prompt + "\n\n" + user_message
+                    token_check = check_token_limits(
+                        full_prompt, 
+                        model_max_tokens=get_model_token_limit(research_model, current_provider)
+                    )
+                    
+                    if not token_check['within_limits']:
+                        error_msg = f"Token limit would be exceeded:\n"
+                        error_msg += f"- Estimated prompt tokens: {token_check['prompt_tokens']}\n"
+                        error_msg += f"- Estimated completion tokens: {token_check['completion_tokens']}\n"
+                        error_msg += f"- Total estimated: {token_check['total_tokens']}\n"
+                        error_msg += f"- Model limit: {token_check['model_max_tokens']}\n\n"
+                        error_msg += f"**Suggestions:**\n"
+                        error_msg += f"1. Reduce your topic scope to be more specific\n"
+                        error_msg += f"2. Request fewer hours of content (currently: {hours if hours else 'not specified'})\n"
+                        error_msg += f"3. Break your topic into smaller parts\n"
+                        
+                        with open(temp_file, 'w') as f:
+                            json.dump({
+                                "status": "failed",
+                                "content": error_msg,
+                                "model": research_model,
+                                "provider": current_provider,
+                                "error_type": "token_limit_exceeded"
+                            }, f)
+                        logger.error(f"[API RETURN] Perplexity deep research failed - token limit | Model: {research_model} | Job ID: {pseudo_job_id}")
+                        return
+                    
                     long_timeout_client = openai.OpenAI(
                         api_key=client.api_key,
                         base_url=client.base_url,
@@ -866,87 +903,143 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                             "provider": current_provider
                         }, f)
                     logger.info(f"Completed and stored result for {pseudo_job_id}")
-                except Exception as e:
+                    
+                except openai.APIError as e:
+                    # Enhanced OpenRouter/API error handling
+                    logger.error(f"[API RETURN] Perplexity API error | Model: {research_model} | Job ID: {pseudo_job_id} | Error: {e}")
+                    
+                    # Try to parse OpenRouter error structure
+                    error_message, is_retryable = handle_api_error(e, "Perplexity deep research")
+                    
                     with open(temp_file, 'w') as f:
                         json.dump({
                             "status": "failed",
-                            "content": str(e),
+                            "content": error_message,
                             "model": research_model,
-                            "provider": current_provider
+                            "provider": current_provider,
+                            "is_retryable": is_retryable,
+                            "error_type": "api_error"
                         }, f)
+                        
+                except Exception as e:
+                    # Handle other types of errors
                     logger.error(f"[API RETURN] Perplexity deep research failed | Model: {research_model} | Job ID: {pseudo_job_id} | Error: {e}")
+                    
+                    error_message = f"❌ **Unexpected Error**\n\n{str(e)}\n\n**Suggestion:** Please try again. If the problem persists, try reducing your topic scope or switching providers."
+                    
+                    with open(temp_file, 'w') as f:
+                        json.dump({
+                            "status": "failed",
+                            "content": error_message,
+                            "model": research_model,
+                            "provider": current_provider,
+                            "error_type": "unexpected_error"
+                        }, f)
 
             threading.Thread(target=run_perplexity_job, daemon=True).start()
             logger.info(f"Perplexity job {pseudo_job_id} started in background thread.")
             return pseudo_job_id
             
         else:
-            # Fallback approach: Use regular chat completion
-            logger.info(f"[API CALL] Reason: Fallback chat completion | Model: {research_model} | Provider: {current_provider}")
-            params = get_api_call_params(
-                model=research_model,
-                messages=[
-                    {"role": "system", "content": DEVELOPER_PROMPT},
-                    {"role": "user", "content": user_message}
-                ],
-                temperature=0.7
-            )
-            response = client.chat.completions.create(**params)
-            
-            # DEBUG: Save raw response
-            save_raw_api_response(response, "fallback_research")
-            
-            meta = getattr(response, 'meta', None) or getattr(response, 'metadata', None) or {}
-            logger.info(f"[API RETURN] Fallback chat completion complete | Model: {research_model} | Tokens: {get_token_count(response)} | Price: {meta.get('price', 'n/a')} | Meta: {meta}")
-            
-            # Generate a pseudo job ID and store response
-            import uuid
-            pseudo_job_id = f"chat-{str(uuid.uuid4())[:8]}"
-            
-            # Store the response temporarily
-            from pathlib import Path
-            temp_dir = Path.home() / '.autodidact' / 'temp_responses'
-            temp_dir.mkdir(parents=True, exist_ok=True)
-            temp_file = temp_dir / f"{pseudo_job_id}.json"
-            
-            import json
-            
-            # Safely extract response content with proper null checks
-            if not response or not hasattr(response, 'choices') or not response.choices:
-                raise ValueError("Invalid response structure: missing or empty choices")
-            
-            if not response.choices[0] or not hasattr(response.choices[0], 'message') or not response.choices[0].message:
-                raise ValueError("Invalid response structure: missing or empty message")
-            
-            response_content = response.choices[0].message.content
-            if not response_content:
-                raise ValueError("Invalid response structure: empty content")
-            
-            with open(temp_file, 'w') as f:
-                json.dump({
-                    "status": "completed",
-                    "content": response_content,
-                    "model": research_model,
-                    "provider": current_provider
-                }, f)
-            
-            return pseudo_job_id
+            # Fallback approach: Use regular chat completion with enhanced error handling
+            try:
+                # Pre-flight token check
+                full_prompt = DEVELOPER_PROMPT + "\n\n" + user_message
+                token_check = check_token_limits(
+                    full_prompt, 
+                    model_max_tokens=get_model_token_limit(research_model, current_provider)
+                )
+                
+                if not token_check['within_limits']:
+                    error_msg = f"❌ **Token Limit Exceeded**\n\n"
+                    error_msg += f"Your request requires approximately {token_check['total_tokens']} tokens, "
+                    error_msg += f"but the model limit is {token_check['model_max_tokens']} tokens.\n\n"
+                    error_msg += f"**Solutions:**\n"
+                    error_msg += f"1. Make your topic more specific and focused\n"
+                    error_msg += f"2. Request fewer hours of content (currently: {hours if hours else 'not specified'})\n"
+                    error_msg += f"3. Break your learning goal into smaller topics\n"
+                    raise RuntimeError(error_msg)
+                
+                logger.info(f"[API CALL] Reason: Fallback chat completion | Model: {research_model} | Provider: {current_provider}")
+                params = get_api_call_params(
+                    model=research_model,
+                    messages=[
+                        {"role": "system", "content": DEVELOPER_PROMPT},
+                        {"role": "user", "content": user_message}
+                    ],
+                    temperature=0.7
+                )
+                response = client.chat.completions.create(**params)
+                
+                # DEBUG: Save raw response
+                save_raw_api_response(response, "fallback_research")
+                
+                meta = getattr(response, 'meta', None) or getattr(response, 'metadata', None) or {}
+                logger.info(f"[API RETURN] Fallback chat completion complete | Model: {research_model} | Tokens: {get_token_count(response)} | Price: {meta.get('price', 'n/a')} | Meta: {meta}")
+                
+                # Generate a pseudo job ID and store response
+                import uuid
+                pseudo_job_id = f"chat-{str(uuid.uuid4())[:8]}"
+                
+                # Store the response temporarily
+                from pathlib import Path
+                temp_dir = Path.home() / '.autodidact' / 'temp_responses'
+                temp_dir.mkdir(parents=True, exist_ok=True)
+                temp_file = temp_dir / f"{pseudo_job_id}.json"
+                
+                import json
+                
+                # Safely extract response content with proper null checks
+                if not response or not hasattr(response, 'choices') or not response.choices:
+                    raise ValueError("Invalid response structure: missing or empty choices")
+                
+                if not response.choices[0] or not hasattr(response.choices[0], 'message') or not response.choices[0].message:
+                    raise ValueError("Invalid response structure: missing or empty message")
+                
+                response_content = response.choices[0].message.content
+                if not response_content:
+                    raise ValueError("Invalid response structure: empty content")
+                
+                with open(temp_file, 'w') as f:
+                    json.dump({
+                        "status": "completed",
+                        "content": response_content,
+                        "model": research_model,
+                        "provider": current_provider
+                    }, f)
+                
+                return pseudo_job_id
+                
+            except openai.APIError as e:
+                # Enhanced API error handling for fallback mode
+                logger.error(f"API error in fallback mode: {e}")
+                error_message, is_retryable = handle_api_error(e, "fallback chat completion")
+                raise RuntimeError(error_message)
         
     except openai.AuthenticationError:
         logger.error("Authentication failed")
-        raise RuntimeError("Invalid API key. Please check your API key configuration.")
+        raise RuntimeError("🔑 **Authentication Failed**\n\nInvalid API key. Please check your API key configuration.")
     except openai.PermissionDeniedError:
         logger.error("Permission denied")
-        raise RuntimeError("API key doesn't have access to the required model.")
+        raise RuntimeError("🚫 **Permission Denied**\n\nYour API key doesn't have access to the required model.")
     except openai.APITimeoutError:
         logger.error("Request timeout")
-        raise RuntimeError("Deep research request timed out. Perplexity requests can take 4-5 minutes.")
+        raise RuntimeError("⏳ **Request Timeout**\n\nDeep research request timed out. Perplexity requests can take 4-5 minutes. Please try again.")
+    except openai.APIError as e:
+        logger.error(f"API error: {e}")
+        # Try enhanced error parsing
+        error_message, is_retryable = handle_api_error(e, "deep research")
+        raise RuntimeError(error_message)
     except ProviderError as e:
         logger.error(f"Provider error: {str(e)}")
-        raise RuntimeError(f"Provider configuration error: {str(e)}")
+        raise RuntimeError(f"🔧 **Provider Configuration Error**\n\n{str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error: {type(e).__name__}: {str(e)}")
-        raise RuntimeError(f"Failed to start research job: {str(e)}") 
+        # Check if this is already a formatted error message
+        if str(e).startswith("❌"):
+            raise RuntimeError(str(e))
+        else:
+            raise RuntimeError(f"❌ **Unexpected Error**\n\n{str(e)}\n\n**Suggestion:** Please try again. If the problem persists, try reducing your topic scope.") 
 
 
 def test_job():

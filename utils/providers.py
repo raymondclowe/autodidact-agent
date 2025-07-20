@@ -259,6 +259,26 @@ def get_api_call_params(
     return params
 
 
+def get_model_token_limit(model: str, provider: str = None) -> int:
+    """
+    Get the token limit for a specific model.
+    
+    Args:
+        model: Model name
+        provider: Provider name. If None, uses current provider.
+        
+    Returns:
+        Token limit for the model, defaults to 128000 if not found
+    """
+    if provider is None:
+        provider = get_current_provider()
+    
+    config = get_provider_config(provider)
+    token_limits = config.get("token_limits", {})
+    
+    return token_limits.get(model, 128000)  # Default to 128k tokens
+
+
 def list_available_models(provider: str = None) -> Dict:
     """
     Get list of available models for a provider.
