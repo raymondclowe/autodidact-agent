@@ -100,8 +100,14 @@ if not project:
 if st.session_state.get('retry_job', False):
     st.session_state.retry_job = False  # Clear the flag immediately
     
+    logger.info(f"Starting retry for project {project_id}")
+    
     # Get the original model from project or fallback to default
     original_model = project.get('model_used', None)
+    logger.info(f"Original model for retry: {original_model}")
+    
+    # Ensure we have a valid model for retry - fallback to None to let start_deep_research_job choose
+    # If original_model is None, start_deep_research_job will select an appropriate model
     
     # Create retry text if available from old job
     old_job_id = project.get('job_id')
