@@ -833,15 +833,15 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                     )
                     
                     if not token_check['within_limits']:
-                        error_msg = f"Token limit would be exceeded:\n"
-                        error_msg += f"- Estimated prompt tokens: {token_check['prompt_tokens']}\n"
-                        error_msg += f"- Estimated completion tokens: {token_check['completion_tokens']}\n"
-                        error_msg += f"- Total estimated: {token_check['total_tokens']}\n"
-                        error_msg += f"- Model limit: {token_check['model_max_tokens']}\n\n"
-                        error_msg += f"**Suggestions:**\n"
-                        error_msg += f"1. Reduce your topic scope to be more specific\n"
-                        error_msg += f"2. Request fewer hours of content (currently: {hours if hours else 'not specified'})\n"
-                        error_msg += f"3. Break your topic into smaller parts\n"
+                        error_msg = (f"Token limit would be exceeded:\n" \
+                            f"- Estimated prompt tokens: {token_check['prompt_tokens']}\n" \
+                            f"- Estimated completion tokens: {token_check['completion_tokens']}\n" \
+                            f"- Total estimated: {token_check['total_tokens']}\n" \
+                            f"- Model limit: {token_check['model_max_tokens']}\n\n" \
+                            "**Suggestions:**\n" \
+                            "1. Reduce your topic scope to be more specific\n" \
+                            f"2. Request fewer hours of content (currently: {hours if hours else 'not specified'})\n" \
+                            "3. Break your topic into smaller parts\n")
                         
                         with open(temp_file, 'w') as f:
                             json.dump({
