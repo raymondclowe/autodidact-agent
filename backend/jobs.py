@@ -451,7 +451,11 @@ def clarify_topic(topic: str, hours: Optional[int] = None) -> List[str]:
         raise RuntimeError("🚫 **Permission Denied**\n\nAPI key doesn't have access to the required model.")
     except openai.APIError as e:
         logger.error(f"API error in clarify_topic: {e}")
-        error_message, is_retryable = handle_api_error(e.response, "topic clarification")
+        try:
+            error_message, is_retryable = handle_api_error(e.response if hasattr(e, 'response') else e, "topic clarification")
+        except Exception as handle_error:
+            logger.error(f"Error handling failed: {handle_error}")
+            error_message = f"❌ **API Error in topic clarification**\n\n{str(e)}\n\n**Suggestion:** Please check your provider configuration and try again."
         raise RuntimeError(error_message)
     except ProviderError as e:
         logger.error(f"Provider error: {str(e)}")
@@ -740,12 +744,20 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
         from utils.deep_research import DEVELOPER_PROMPT
         
         # Get the appropriate model for deep research
+        logger.info(f"Selecting model for deep research, initial research_model: {research_model}")
         try:
             research_model = research_model or get_model_for_task("deep_research")
-        except ProviderError:
+            logger.info(f"Successfully selected deep research model: {research_model}")
+        except ProviderError as deep_research_error:
             # Fallback to chat model if deep research not available
-            logger.info(f"Deep research model not available for {current_provider}, using chat model")
-            research_model = research_model or get_model_for_task("chat")
+            logger.info(f"Deep research model not available for {current_provider}, using chat model. Error: {deep_research_error}")
+            try:
+                research_model = research_model or get_model_for_task("chat")
+                logger.info(f"Successfully selected fallback chat model: {research_model}")
+            except ProviderError as fallback_error:
+                # If both deep research and chat models fail, raise a clearer error
+                logger.error(f"Failed to get both deep_research and chat models for provider {current_provider}")
+                raise RuntimeError(f"🔧 **Provider Configuration Error**\n\nCannot find suitable model for provider '{current_provider}'.\n\n**Details:** {str(fallback_error)}\n\n**Suggestion:** Check your provider configuration or try switching to a different provider.")
         
         logger.info(f"Using provider: {current_provider}")
         logger.info(f"Using model: {research_model}")
@@ -909,7 +921,12 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                     logger.error(f"[API RETURN] Perplexity API error | Model: {research_model} | Job ID: {pseudo_job_id} | Error: {e}")
                     
                     # Try to parse OpenRouter error structure
-                    error_message, is_retryable = handle_api_error(e, "Perplexity deep research")
+                    try:
+                        error_message, is_retryable = handle_api_error(e, "Perplexity deep research")
+                    except Exception as handle_error:
+                        logger.error(f"Error handling failed: {handle_error}")
+                        error_message = f"❌ **Perplexity API Error**\n\n{str(e)}\n\n**Suggestion:** Please check your provider configuration and try again."
+                        is_retryable = False
                     
                     with open(temp_file, 'w') as f:
                         json.dump({
@@ -1013,7 +1030,11 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
             except openai.APIError as e:
                 # Enhanced API error handling for fallback mode
                 logger.error(f"API error in fallback mode: {e}")
-                error_message, is_retryable = handle_api_error(e, "fallback chat completion")
+                try:
+                    error_message, is_retryable = handle_api_error(e, "fallback chat completion")
+                except Exception as handle_error:
+                    logger.error(f"Error handling failed: {handle_error}")
+                    error_message = f"❌ **API Error in fallback chat completion**\n\n{str(e)}\n\n**Suggestion:** Please check your provider configuration and try again."
                 raise RuntimeError(error_message)
         
     except openai.AuthenticationError:
@@ -1028,7 +1049,11 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
     except openai.APIError as e:
         logger.error(f"API error: {e}")
         # Try enhanced error parsing
-        error_message, is_retryable = handle_api_error(e, "deep research")
+        try:
+            error_message, is_retryable = handle_api_error(e, "deep research")
+        except Exception as handle_error:
+            logger.error(f"Error handling failed: {handle_error}")
+            error_message = f"❌ **API Error in deep research**\n\n{str(e)}\n\n**Suggestion:** Please check your provider configuration and try again."
         raise RuntimeError(error_message)
     except ProviderError as e:
         logger.error(f"Provider error: {str(e)}")
