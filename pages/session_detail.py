@@ -174,22 +174,55 @@ _STORE = Path.home() / '.autodidact' / 'projects' / project_id / 'sessions'
 _STORE.mkdir(exist_ok=True)
 
 def _load_state(session_id: str) -> SessionState | None:
-    # FIXME: break this for now
+    """Load session state from pickle file if it exists, with database fallback"""
+    try:
+        # First try to load from pickle file
+        fp = _STORE / f"{session_id}.pkl"
+        if fp.exists():
+            return pickle.loads(fp.read_bytes())
+    except Exception as e:
+        print(f"Warning: Failed to load session state from file {fp}: {e}")
+    
+    # Fallback to database
+    try:
+        from backend.db import load_session_state
+        db_state = load_session_state(session_id)
+        if db_state:
+            return db_state
+    except Exception as e:
+        print(f"Warning: Failed to load session state from database: {e}")
+    
     return None
-    fp = _STORE / f"{session_id}.pkl"
-    if not fp.exists():
-        return None
-    return pickle.loads(fp.read_bytes())
 
 def _save_state(state: SessionState):
-    # FIXME: break this for now
-    return
-    fp = _STORE / f"{state['session_id']}.pkl"
-    fp.write_bytes(pickle.dumps(state))
+    """Save session state to both pickle file and database"""
+    # Save to pickle file
+    try:
+        fp = _STORE / f"{state['session_id']}.pkl"
+        fp.write_bytes(pickle.dumps(state))
+    except Exception as e:
+        print(f"Warning: Failed to save session state to file {fp}: {e}")
+    
+    # Save to database as backup
+    try:
+        from backend.db import save_session_state
+        save_session_state(state['session_id'], state)
+    except Exception as e:
+        print(f"Warning: Failed to save session state to database: {e}")
 
 state: SessionState | None = _load_state(session_id)
 if state is None:
     state = create_initial_state(session_id, project_id, node_id)
+
+# Sync loaded state with Streamlit session state
+if "history" not in st.session_state:
+    st.session_state.history = state.get('history', [])
+if "turn_count" not in st.session_state:
+    st.session_state.turn_count = state.get('turn_count', 0)
+if "current_phase" not in st.session_state:
+    st.session_state.current_phase = state.get('current_phase', 'load_context')
+if "graph_state" not in st.session_state:
+    st.session_state.graph_state = state
 
 # Session control buttons
 with st.container():

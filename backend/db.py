@@ -135,6 +135,7 @@ def init_database():
         final_score REAL,
         started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP,
+        session_state_json TEXT,
         FOREIGN KEY (project_id) REFERENCES project(id),
         FOREIGN KEY (node_id) REFERENCES node(id)
     );
@@ -917,6 +918,51 @@ def get_session_info(session_id: str) -> Optional[Dict[str, Any]]:
                 "node_label": row[7],
                 "node_original_id": row[8]
             }
+        return None
+
+
+def save_session_state(session_id: str, session_state: dict):
+    """Save session state to database as JSON"""
+    try:
+        with get_db_connection() as conn:
+            # Check if session exists in the session table
+            cursor = conn.execute("SELECT id FROM session WHERE id = ?", (session_id,))
+            session_exists = cursor.fetchone() is not None
+            
+            if session_exists:
+                # Update existing session
+                conn.execute("""
+                    UPDATE session 
+                    SET session_state_json = ?
+                    WHERE id = ?
+                """, (json.dumps(session_state), session_id))
+            else:
+                # Session doesn't exist in table, but we can still save state to a temporary table
+                # or just log a warning since this is backup storage
+                print(f"Warning: Session {session_id} not found in session table, skipping database save")
+                return
+            
+            conn.commit()
+    except Exception as e:
+        print(f"Warning: Failed to save session state to database: {e}")
+
+
+def load_session_state(session_id: str) -> Optional[dict]:
+    """Load session state from database"""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.execute("""
+                SELECT session_state_json
+                FROM session 
+                WHERE id = ?
+            """, (session_id,))
+            
+            row = cursor.fetchone()
+            if row and row[0]:
+                return json.loads(row[0])
+            return None
+    except Exception as e:
+        print(f"Warning: Failed to load session state from database: {e}")
         return None
 
 
