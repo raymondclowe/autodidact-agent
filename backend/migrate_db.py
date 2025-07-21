@@ -402,6 +402,8 @@ def migrate_add_session_state_json():
         
         # Add session_state_json if it doesn't exist
         if 'session_state_json' not in columns:
+            # Note: ALTER TABLE statements cannot use parameterized queries for table/column names
+            # This is safe since we're using hardcoded values in a migration script
             cursor.execute("ALTER TABLE session ADD COLUMN session_state_json TEXT")
             print("Added session_state_json column to session table")
         else:

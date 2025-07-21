@@ -57,6 +57,13 @@ from backend.tutor_prompts import (
 )
 
 # ────────────────────────────────────────────────────────────────────────────
+# Constants
+# ────────────────────────────────────────────────────────────────────────────
+
+# Transition message prefix used when moving to the next objective
+NEXT_OBJECTIVE_PREFIX = "Let's move to the next objective:"
+
+# ────────────────────────────────────────────────────────────────────────────
 # Utilities
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -360,13 +367,27 @@ def teaching_node(state: SessionState) -> SessionState:
     idx = state.get("objective_idx", 0)
     objectives = state.get("objectives_to_teach", [])
 
-    # Check if all objectives completed
+    # Check if all objectives completed or index is out of bounds
     if idx >= len(objectives):
         return {**state, 
                 "current_phase": "testing",
                 'navigate_without_user_interaction': True}
 
+    # Ensure we have a valid objective
+    if not objectives or idx < 0:
+        print(f"[teaching_node] ERROR: Invalid objective index {idx} for objectives list of length {len(objectives)}")
+        return {**state, 
+                "current_phase": "testing",
+                'navigate_without_user_interaction': True}
+
     current_obj = objectives[idx]
+    
+    # Additional safety check for current_obj
+    if current_obj is None:
+        print(f"[teaching_node] ERROR: current_obj is None at index {idx}")
+        return {**state, 
+                "current_phase": "testing",
+                'navigate_without_user_interaction': True}
 
     sys_prompt = format_teaching_prompt(
         obj_id=current_obj.id,
@@ -385,7 +406,7 @@ def teaching_node(state: SessionState) -> SessionState:
         is_new_objective = (
             len(history) >= 2 and 
             history[-1]["role"] == "assistant" and 
-            "Let's move to the next objective:" in history[-1]["content"]
+            NEXT_OBJECTIVE_PREFIX in history[-1]["content"]
         )
         if is_new_objective:
             messages.append({"role": "user", "content": "I'm ready to learn about this new topic."})
@@ -429,7 +450,12 @@ def teaching_node(state: SessionState) -> SessionState:
             # FIXME: when an objective has been completed, we should get a summary of the messages in that and only send a summary from then onwards
             new_objective_idx = idx + 1;
             if new_objective_idx < len(objectives):
-                assistant2 = {"role": "assistant", "content": "Let's move to the next objective: " + objectives[new_objective_idx].description}
+                next_obj = objectives[new_objective_idx]
+                if next_obj is not None and hasattr(next_obj, 'description'):
+                    assistant2 = {"role": "assistant", "content": NEXT_OBJECTIVE_PREFIX + " " + next_obj.description}
+                else:
+                    print(f"[teaching_node] WARNING: Next objective at index {new_objective_idx} is invalid")
+                    assistant2 = {"role": "assistant", "content": "Great job! You've mastered all the objectives for this node. Let's move to the testing phase!"}
             else:
                 assistant2 = {"role": "assistant", "content": "Great job! You've mastered all the objectives for this node. Let's move to the testing phase!"}
             # Advance to next objective - convert set to list for proper serialization
