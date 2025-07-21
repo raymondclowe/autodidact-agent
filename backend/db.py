@@ -12,6 +12,7 @@ from typing import List, Dict, Optional, Tuple, Any
 from contextlib import contextmanager
 import logging
 import os
+from pydantic import BaseModel
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,19 @@ logger = logging.getLogger(__name__)
 # Constants
 MASTERY_THRESHOLD = 0.7
 DB_PATH = Path.home() / '.autodidact' / 'autodidact.db'
+
+
+class CustomJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that can handle Pydantic BaseModel objects"""
+    def default(self, obj):
+        if isinstance(obj, BaseModel):
+            return obj.model_dump()
+        return super().default(obj)
+
+
+def safe_json_dumps(obj: Any) -> str:
+    """Safely serialize objects to JSON, handling Pydantic models"""
+    return json.dumps(obj, cls=CustomJSONEncoder)
 
 
 def clean_job_id(job_id: str) -> str:
@@ -164,6 +178,9 @@ def init_database():
     with get_db_connection() as conn:
         conn.executescript(schema)
         conn.commit()
+    
+    # Run necessary migrations for existing databases
+    _ensure_session_state_column()
 
 
 def create_project(topic: str, report_path: str, resources: Dict) -> str:
@@ -935,7 +952,7 @@ def save_session_state(session_id: str, session_state: dict):
                     UPDATE session 
                     SET session_state_json = ?
                     WHERE id = ?
-                """, (json.dumps(session_state), session_id))
+                """, (safe_json_dumps(session_state), session_id))
             else:
                 # Session doesn't exist in table, but we can still save state to a temporary table
                 # or just log a warning since this is backup storage
@@ -959,11 +976,52 @@ def load_session_state(session_id: str) -> Optional[dict]:
             
             row = cursor.fetchone()
             if row and row[0]:
-                return json.loads(row[0])
+                raw_state = json.loads(row[0])
+                # Convert dictionaries back to Pydantic objects where needed
+                return _restore_pydantic_objects(raw_state)
             return None
     except Exception as e:
         print(f"Warning: Failed to load session state from database: {e}")
         return None
+
+
+def _restore_pydantic_objects(state: dict) -> dict:
+    """Convert dictionary representations back to Pydantic objects"""
+    from backend.session_state import Objective, QuizQuestion, TestAnswer
+    
+    if not isinstance(state, dict):
+        return state
+    
+    # Create a copy to avoid modifying the original
+    restored_state = state.copy()
+    
+    # Convert Objective lists back to Pydantic objects
+    objective_fields = [
+        'all_objectives', 'objectives_to_teach', 
+        'objectives_already_known', 'prerequisite_objectives'
+    ]
+    
+    for field in objective_fields:
+        if field in restored_state and isinstance(restored_state[field], list):
+            restored_objectives = []
+            for obj_data in restored_state[field]:
+                if isinstance(obj_data, dict):
+                    restored_objectives.append(Objective(**obj_data))
+                else:
+                    restored_objectives.append(obj_data)  # Already an Objective
+            restored_state[field] = restored_objectives
+    
+    # Convert QuizQuestion objects if they exist
+    if 'quiz_questions' in restored_state and isinstance(restored_state['quiz_questions'], list):
+        restored_questions = []
+        for q_data in restored_state['quiz_questions']:
+            if isinstance(q_data, dict):
+                restored_questions.append(QuizQuestion(**q_data))
+            else:
+                restored_questions.append(q_data)
+        restored_state['quiz_questions'] = restored_questions
+    
+    return restored_state
 
 
 def delete_project(project_id: str) -> bool:
@@ -1127,6 +1185,25 @@ def debug_database_connections():
         logger.error(f"Test connection failed: {type(e).__name__}: {str(e)}")
     
     logger.info("=== END DATABASE DEBUG INFO ===")
+
+
+def _ensure_session_state_column():
+    """Ensure session_state_json column exists in session table for existing databases"""
+    try:
+        with get_db_connection() as conn:
+            # Check if column already exists
+            cursor = conn.execute("PRAGMA table_info(session)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            # Add session_state_json if it doesn't exist
+            if 'session_state_json' not in columns:
+                cursor.execute("ALTER TABLE session ADD COLUMN session_state_json TEXT")
+                logger.info("Added session_state_json column to session table")
+                conn.commit()
+            else:
+                logger.debug("session_state_json column already exists")
+    except Exception as e:
+        logger.warning(f"Failed to ensure session_state_json column: {e}")
 
 
 # Initialize database on module import
