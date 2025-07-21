@@ -378,9 +378,22 @@ def teaching_node(state: SessionState) -> SessionState:
 
     messages = [{"role": "system", "content": sys_prompt}, *history]
 
-    # this was causing infinite loops. I do not think LLM compulsorily reqires user message.
-    # if not history or history[-1]["role"] != "user":
-    #     messages.append({"role": "user", "content": "I'm ready."})
+    # If we're starting a new objective and there's no user message to respond to,
+    # or if the last message is from the assistant, add a ready message
+    if not history or history[-1]["role"] != "user":
+        # Check if this is a new objective (based on transition messages)
+        is_new_objective = (
+            len(history) >= 2 and 
+            history[-1]["role"] == "assistant" and 
+            "Let's move to the next objective:" in history[-1]["content"]
+        )
+        if is_new_objective:
+            messages.append({"role": "user", "content": "I'm ready to learn about this new topic."})
+        elif not history:
+            messages.append({"role": "user", "content": "I'm ready to start learning."})
+        else:
+            # If last message was from assistant but not a transition, add a simple ready message
+            messages.append({"role": "user", "content": "Please continue."})
 
     try:
         # Get LLM response with error handling
@@ -635,8 +648,7 @@ def wrap_node(state: SessionState) -> SessionState:
         session_duration = calculate_session_duration(state)
         complete_session(
             session_id=state.get("session_id"),
-            final_score=overall_score,
-            duration_minutes=session_duration
+            final_score=overall_score
         )
         
         # Create wrap-up message
@@ -663,6 +675,7 @@ See you next time!
         # Return state with wrap-up message
         return {
             **state,
+            "current_phase": "completed",
             "history": history + [{"role": "assistant", "content": wrap_message}]
         }
         
@@ -674,6 +687,7 @@ See you next time!
         # Return state with simple completion message
         return {
             **state,
+            "current_phase": "completed",
             "history": history + [{"role": "assistant", "content": "Session complete! Thank you for learning with me today."}]
         }
 
