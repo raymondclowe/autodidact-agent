@@ -57,6 +57,13 @@ from backend.tutor_prompts import (
 )
 
 # ────────────────────────────────────────────────────────────────────────────
+# Constants
+# ────────────────────────────────────────────────────────────────────────────
+
+# Transition message prefix used when moving to the next objective
+NEXT_OBJECTIVE_PREFIX = "Let's move to the next objective:"
+
+# ────────────────────────────────────────────────────────────────────────────
 # Utilities
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -360,13 +367,27 @@ def teaching_node(state: SessionState) -> SessionState:
     idx = state.get("objective_idx", 0)
     objectives = state.get("objectives_to_teach", [])
 
-    # Check if all objectives completed
+    # Check if all objectives completed or index is out of bounds
     if idx >= len(objectives):
         return {**state, 
                 "current_phase": "testing",
                 'navigate_without_user_interaction': True}
 
+    # Ensure we have a valid objective
+    if not objectives or idx < 0:
+        print(f"[teaching_node] ERROR: Invalid objective index {idx} for objectives list of length {len(objectives)}")
+        return {**state, 
+                "current_phase": "testing",
+                'navigate_without_user_interaction': True}
+
     current_obj = objectives[idx]
+    
+    # Additional safety check for current_obj
+    if current_obj is None:
+        print(f"[teaching_node] ERROR: current_obj is None at index {idx}")
+        return {**state, 
+                "current_phase": "testing",
+                'navigate_without_user_interaction': True}
 
     sys_prompt = format_teaching_prompt(
         obj_id=current_obj.id,
@@ -378,9 +399,22 @@ def teaching_node(state: SessionState) -> SessionState:
 
     messages = [{"role": "system", "content": sys_prompt}, *history]
 
-    # this was causing infinite loops. I do not think LLM compulsorily reqires user message.
-    # if not history or history[-1]["role"] != "user":
-    #     messages.append({"role": "user", "content": "I'm ready."})
+    # If we're starting a new objective and there's no user message to respond to,
+    # or if the last message is from the assistant, add a ready message
+    if not history or history[-1]["role"] != "user":
+        # Check if this is a new objective (based on transition messages)
+        is_new_objective = (
+            len(history) >= 2 and 
+            history[-1]["role"] == "assistant" and 
+            NEXT_OBJECTIVE_PREFIX in history[-1]["content"]
+        )
+        if is_new_objective:
+            messages.append({"role": "user", "content": "I'm ready to learn about this new topic."})
+        elif not history:
+            messages.append({"role": "user", "content": "I'm ready to start learning."})
+        else:
+            # If last message was from assistant but not a transition, add a simple ready message
+            messages.append({"role": "user", "content": "Please continue."})
 
     try:
         # Get LLM response with error handling
@@ -391,10 +425,21 @@ def teaching_node(state: SessionState) -> SessionState:
         response = llm.invoke(messages)
         assistant_content = response.content
         
+        # Check if response is empty or whitespace-only
+        if not assistant_content or not assistant_content.strip():
+            print(f"[teaching_node] WARNING: LLM returned empty content for objective {current_obj.description}")
+            assistant_content = f"Let me introduce you to: {current_obj.description}. What do you think this concept might involve?"
+        
         # Clean up improper citations in the response
         cleaned_content = clean_improper_citations(assistant_content, state.get("references_sections_resolved", []))
         # Remove control blocks from user-facing content
         cleaned_content = remove_control_blocks(cleaned_content)
+        
+        # Final check for empty cleaned content
+        if not cleaned_content or not cleaned_content.strip():
+            print(f"[teaching_node] WARNING: Cleaned content is empty for objective {current_obj.description}")
+            cleaned_content = f"Let's explore: {current_obj.description}. What questions do you have about this topic?"
+            
         assistant = {"role": "assistant", "content": cleaned_content}
         print(f"[teaching_node] assistant llm call response: {response.content}")
         print(f"[teaching_node] cleaned assistant content: {cleaned_content}")
@@ -405,7 +450,12 @@ def teaching_node(state: SessionState) -> SessionState:
             # FIXME: when an objective has been completed, we should get a summary of the messages in that and only send a summary from then onwards
             new_objective_idx = idx + 1;
             if new_objective_idx < len(objectives):
-                assistant2 = {"role": "assistant", "content": "Let's move to the next objective: " + objectives[new_objective_idx].description}
+                next_obj = objectives[new_objective_idx]
+                if next_obj is not None and hasattr(next_obj, 'description'):
+                    assistant2 = {"role": "assistant", "content": NEXT_OBJECTIVE_PREFIX + " " + next_obj.description}
+                else:
+                    print(f"[teaching_node] WARNING: Next objective at index {new_objective_idx} is invalid")
+                    assistant2 = {"role": "assistant", "content": "Great job! You've mastered all the objectives for this node. Let's move to the testing phase!"}
             else:
                 assistant2 = {"role": "assistant", "content": "Great job! You've mastered all the objectives for this node. Let's move to the testing phase!"}
             # Advance to next objective - convert set to list for proper serialization
@@ -624,19 +674,23 @@ def wrap_node(state: SessionState) -> SessionState:
     try:
         # Update mastery for each objective based on test performance
         if objectives_taught and overall_score > 0:
-            # Simple approach: apply overall score as mastery increase
-            # You might want a more sophisticated algorithm here
+            # Prepare learning objective scores for the update_mastery function
+            lo_scores = {}
             for obj in objectives_taught:
-                # Increase mastery based on score (max 1.0)
+                # Calculate new mastery based on score (max 1.0)
                 new_mastery = min(1.0, obj.mastery + (overall_score * 0.3))
-                update_mastery(obj.id, new_mastery)
+                lo_scores[obj.id] = new_mastery
+                
+            # Update mastery for the node using the correct function signature
+            if lo_scores:
+                node_id = state.get("node_id")
+                update_mastery(node_id, lo_scores)
                 
         # Complete the session in database
         session_duration = calculate_session_duration(state)
         complete_session(
             session_id=state.get("session_id"),
-            final_score=overall_score,
-            duration_minutes=session_duration
+            final_score=overall_score
         )
         
         # Create wrap-up message
@@ -663,6 +717,7 @@ See you next time!
         # Return state with wrap-up message
         return {
             **state,
+            "current_phase": "completed",
             "history": history + [{"role": "assistant", "content": wrap_message}]
         }
         
@@ -674,6 +729,7 @@ See you next time!
         # Return state with simple completion message
         return {
             **state,
+            "current_phase": "completed",
             "history": history + [{"role": "assistant", "content": "Session complete! Thank you for learning with me today."}]
         }
 

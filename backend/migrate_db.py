@@ -385,6 +385,40 @@ def migrate_add_model_used_field():
         conn.close()
 
 
+def migrate_add_session_state_json():
+    """Add session_state_json field to session table"""
+    
+    if not DB_PATH.exists():
+        print("Database does not exist. Run the app first to create it.")
+        return
+    
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    
+    try:
+        # Check if column already exists
+        cursor.execute("PRAGMA table_info(session)")
+        columns = [column[1] for column in cursor.fetchall()]
+        
+        # Add session_state_json if it doesn't exist
+        if 'session_state_json' not in columns:
+            # Note: ALTER TABLE statements cannot use parameterized queries for table/column names
+            # This is safe since we're using hardcoded values in a migration script
+            cursor.execute("ALTER TABLE session ADD COLUMN session_state_json TEXT")
+            print("Added session_state_json column to session table")
+        else:
+            print("session_state_json column already exists")
+        
+        conn.commit()
+        print("Session state JSON migration completed successfully!")
+        
+    except Exception as e:
+        print(f"Migration failed: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     migrate_add_job_fields()
     migrate_add_name_field()
@@ -395,3 +429,4 @@ if __name__ == "__main__":
     migrate_add_project_id_to_learning_objective()
     migrate_remove_graph_json_column()
     migrate_add_model_used_field()
+    migrate_add_session_state_json()

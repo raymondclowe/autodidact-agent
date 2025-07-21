@@ -76,6 +76,7 @@ class SessionState(TypedDict, total=False):
         "testing",
         "grading",
         "wrap",
+        "completed",
     ]
     objective_idx: int            # index into objectives_to_teach
     exit_requested: bool          # set by UI to trigger early exit
