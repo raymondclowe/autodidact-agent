@@ -246,6 +246,34 @@ def clean_improper_citations(text: str, refs: list[dict[str, Any]]) -> str:
     
     return cleaned_text
 
+
+def remove_control_blocks(text: str) -> str:
+    """Remove control blocks from AI responses for user display.
+    
+    Control blocks like <control>{"objective_complete": true}</control> are used
+    internally for system logic but should not be shown to users.
+    
+    Parameters
+    ----------
+    text : str
+        AI response text that may contain control blocks
+        
+    Returns
+    -------
+    str
+        Text with control blocks removed
+    """
+    if not text:
+        return text
+    
+    # Remove control blocks using the same regex pattern as extract_control_block
+    cleaned_text = CONTROL_TAG_RE.sub('', text)
+    
+    # Clean up any leftover whitespace or formatting artifacts
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+    
+    return cleaned_text
+
 # ---------------------------------------------------------------------------
 # Control‑block extraction + validation helper
 # ---------------------------------------------------------------------------
