@@ -193,6 +193,14 @@ def _load_state(session_id: str) -> SessionState | None:
         print(f"Warning: Failed to load session state from database: {e}")
     
     return None
+    fp = _STORE / f"{session_id}.pkl"
+    if not fp.exists():
+        return None
+    try:
+        return pickle.loads(fp.read_bytes())
+    except Exception as e:
+        print(f"Failed to load session state: {e}")
+        return None
 
 def _save_state(state: SessionState):
     """Save session state to both pickle file and database"""
@@ -209,10 +217,17 @@ def _save_state(state: SessionState):
         save_session_state(state['session_id'], state)
     except Exception as e:
         print(f"Warning: Failed to save session state to database: {e}")
+    fp = _STORE / f"{state['session_id']}.pkl"
+    try:
+        fp.write_bytes(pickle.dumps(state))
+    except Exception as e:
+        print(f"Failed to save session state: {e}")
 
 state: SessionState | None = _load_state(session_id)
 if state is None:
     state = create_initial_state(session_id, project_id, node_id)
+    # Save initial state immediately
+    _save_state(state)
 
 # Sync loaded state with Streamlit session state
 if "history" not in st.session_state:
@@ -259,12 +274,15 @@ for message in st.session_state.history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Handle initial message generation
+    # Handle initial message generation
 if not is_completed and len(st.session_state.history) == 0:
     # Generate initial welcome message
     with st.chat_message("assistant"):
         with st.spinner("🤔 Preparing session..."):
             result = run_tutor_response(session_info, node_info)
+            # Save state after assistant response
+            if 'graph_state' in st.session_state:
+                _save_state(st.session_state.graph_state)
             if result['success']:
                 # Display the new message(s)
                 new_messages = st.session_state.history[-result['new_message_count']:]
@@ -279,19 +297,21 @@ if not is_completed and len(st.session_state.history) == 0:
 # Accept user input (disabled for completed sessions)
 if not is_completed:
     if prompt := st.chat_input("Your response..."):
-        
         # Add user message to chat history
         st.session_state.history.append({"role": "user", "content": prompt})
-        
+        # Save state after user input
+        if 'graph_state' in st.session_state:
+            _save_state(st.session_state.graph_state)
         # Display user message in chat message container
         with st.chat_message("user"):
             st.markdown(prompt)
-        
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
             with st.spinner("🤔 Thinking..."):
                 result = run_tutor_response(session_info, node_info)
-                
+                # Save state after assistant response
+                if 'graph_state' in st.session_state:
+                    _save_state(st.session_state.graph_state)
                 if result['success']:
                     # Display new assistant messages
                     new_messages = st.session_state.history[-result['new_message_count']:]
@@ -300,22 +320,18 @@ if not is_completed:
                         if msg["role"] == "assistant":
                             print(f"msg to be shown: {msg['content']}")
                             st.markdown(msg["content"])
-                    
                     print(f"result: {result}")
                     print(f"st.session_state.history: {st.session_state.history}")
-                    
                     # Check if session is completed
                     if result['is_completed']:
                         st.balloons()
                         st.success(f"🎉 **Session Complete!** Your score: {int(result['final_score'] * 100)}%")
-                        
                         # Show completion buttons
                         col1, col2 = st.columns(2)
                         with col1:
                             if st.button("✅ Back to Project", type="primary", use_container_width=True):
                                 st.session_state.selected_project_id = session_info['project_id']
                                 st.switch_page("pages/project_detail.py")
-                        
                         with col2:
                             if st.button("📊 View Progress", type="secondary", use_container_width=True):
                                 st.session_state.selected_project_id = session_info['project_id']
@@ -335,7 +351,6 @@ if not is_completed:
                     else:
                         st.error(f"❌ Error in tutor response: {result['error']}")
                         st.info("Try refreshing the page or starting a new session.")
-                    
                     # Show debug info in expander
                     with st.expander("🐛 Debug Information"):
                         st.json(result['debug_info'])
