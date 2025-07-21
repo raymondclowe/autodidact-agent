@@ -925,11 +925,23 @@ def save_session_state(session_id: str, session_state: dict):
     """Save session state to database as JSON"""
     try:
         with get_db_connection() as conn:
-            conn.execute("""
-                UPDATE session 
-                SET session_state_json = ?
-                WHERE id = ?
-            """, (json.dumps(session_state), session_id))
+            # Check if session exists in the session table
+            cursor = conn.execute("SELECT id FROM session WHERE id = ?", (session_id,))
+            session_exists = cursor.fetchone() is not None
+            
+            if session_exists:
+                # Update existing session
+                conn.execute("""
+                    UPDATE session 
+                    SET session_state_json = ?
+                    WHERE id = ?
+                """, (json.dumps(session_state), session_id))
+            else:
+                # Session doesn't exist in table, but we can still save state to a temporary table
+                # or just log a warning since this is backup storage
+                print(f"Warning: Session {session_id} not found in session table, skipping database save")
+                return
+            
             conn.commit()
     except Exception as e:
         print(f"Warning: Failed to save session state to database: {e}")
