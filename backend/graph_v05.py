@@ -404,10 +404,21 @@ def teaching_node(state: SessionState) -> SessionState:
         response = llm.invoke(messages)
         assistant_content = response.content
         
+        # Check if response is empty or whitespace-only
+        if not assistant_content or not assistant_content.strip():
+            print(f"[teaching_node] WARNING: LLM returned empty content for objective {current_obj.description}")
+            assistant_content = f"Let me introduce you to: {current_obj.description}. What do you think this concept might involve?"
+        
         # Clean up improper citations in the response
         cleaned_content = clean_improper_citations(assistant_content, state.get("references_sections_resolved", []))
         # Remove control blocks from user-facing content
         cleaned_content = remove_control_blocks(cleaned_content)
+        
+        # Final check for empty cleaned content
+        if not cleaned_content or not cleaned_content.strip():
+            print(f"[teaching_node] WARNING: Cleaned content is empty for objective {current_obj.description}")
+            cleaned_content = f"Let's explore: {current_obj.description}. What questions do you have about this topic?"
+            
         assistant = {"role": "assistant", "content": cleaned_content}
         print(f"[teaching_node] assistant llm call response: {response.content}")
         print(f"[teaching_node] cleaned assistant content: {cleaned_content}")
@@ -637,12 +648,17 @@ def wrap_node(state: SessionState) -> SessionState:
     try:
         # Update mastery for each objective based on test performance
         if objectives_taught and overall_score > 0:
-            # Simple approach: apply overall score as mastery increase
-            # You might want a more sophisticated algorithm here
+            # Prepare learning objective scores for the update_mastery function
+            lo_scores = {}
             for obj in objectives_taught:
-                # Increase mastery based on score (max 1.0)
+                # Calculate new mastery based on score (max 1.0)
                 new_mastery = min(1.0, obj.mastery + (overall_score * 0.3))
-                update_mastery(obj.id, new_mastery)
+                lo_scores[obj.id] = new_mastery
+                
+            # Update mastery for the node using the correct function signature
+            if lo_scores:
+                node_id = state.get("node_id")
+                update_mastery(node_id, lo_scores)
                 
         # Complete the session in database
         session_duration = calculate_session_duration(state)
