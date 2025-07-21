@@ -53,6 +53,7 @@ from backend.tutor_prompts import (
     RECAP_CONTROL_SCHEMA,
     extract_control_block,
     clean_improper_citations,
+    remove_control_blocks,
 )
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -302,6 +303,8 @@ def recap_node(state: SessionState) -> SessionState:
         
         # Clean up improper citations in the response
         cleaned_content = clean_improper_citations(assistant_content, state.get("references_sections_resolved", []))
+        # Remove control blocks from user-facing content
+        cleaned_content = remove_control_blocks(cleaned_content)
         assistant = {"role": "assistant", "content": cleaned_content}
         print(f"[recap_node] assistant: {assistant}")
         
@@ -390,6 +393,8 @@ def teaching_node(state: SessionState) -> SessionState:
         
         # Clean up improper citations in the response
         cleaned_content = clean_improper_citations(assistant_content, state.get("references_sections_resolved", []))
+        # Remove control blocks from user-facing content
+        cleaned_content = remove_control_blocks(cleaned_content)
         assistant = {"role": "assistant", "content": cleaned_content}
         print(f"[teaching_node] assistant llm call response: {response.content}")
         print(f"[teaching_node] cleaned assistant content: {cleaned_content}")
