@@ -960,11 +960,21 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
         else:
             # Fallback approach: Use regular chat completion with enhanced error handling
             try:
+                # For fallback, ensure we use a model compatible with the current provider
+                # instead of potentially using a model from a different provider
+                try:
+                    fallback_model = get_model_for_task("chat", current_provider)
+                    logger.info(f"Using fallback chat model: {fallback_model} for provider: {current_provider}")
+                except ProviderError:
+                    # If chat model not available, try to use the research_model if it's compatible
+                    fallback_model = research_model
+                    logger.info(f"Chat model not available, using research model: {fallback_model}")
+                
                 # Pre-flight token check
                 full_prompt = DEVELOPER_PROMPT + "\n\n" + user_message
                 token_check = check_token_limits(
                     full_prompt, 
-                    model_max_tokens=get_model_token_limit(research_model, current_provider)
+                    model_max_tokens=get_model_token_limit(fallback_model, current_provider)
                 )
                 
                 if not token_check['within_limits']:
@@ -977,9 +987,9 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                     error_msg += f"3. Break your learning goal into smaller topics\n"
                     raise RuntimeError(error_msg)
                 
-                logger.info(f"[API CALL] Reason: Fallback chat completion | Model: {research_model} | Provider: {current_provider}")
+                logger.info(f"[API CALL] Reason: Fallback chat completion | Model: {fallback_model} | Provider: {current_provider}")
                 params = get_api_call_params(
-                    model=research_model,
+                    model=fallback_model,
                     messages=[
                         {"role": "system", "content": DEVELOPER_PROMPT},
                         {"role": "user", "content": user_message}
@@ -992,7 +1002,7 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                 save_raw_api_response(response, "fallback_research")
                 
                 meta = getattr(response, 'meta', None) or getattr(response, 'metadata', None) or {}
-                logger.info(f"[API RETURN] Fallback chat completion complete | Model: {research_model} | Tokens: {get_token_count(response)} | Price: {meta.get('price', 'n/a')} | Meta: {meta}")
+                logger.info(f"[API RETURN] Fallback chat completion complete | Model: {fallback_model} | Tokens: {get_token_count(response)} | Price: {meta.get('price', 'n/a')} | Meta: {meta}")
                 
                 # Generate a pseudo job ID and store response
                 import uuid
@@ -1021,7 +1031,7 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                     json.dump({
                         "status": "completed",
                         "content": response_content,
-                        "model": research_model,
+                        "model": fallback_model,
                         "provider": current_provider
                     }, f)
                 
