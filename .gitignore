@@ -177,3 +177,8 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 .DS_Store
+
+# Test files
+test_session_persistence.py
+test_issue_30_fix.py
+test_multiple_messages_fix.py
