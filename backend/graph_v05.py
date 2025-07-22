@@ -468,7 +468,8 @@ def teaching_node(state: SessionState) -> SessionState:
                 "history": history + [assistant, assistant2],
                 "objective_idx": idx + 1,
                 # Wait for user interaction before proceeding to next objective
-                'navigate_without_user_interaction': False,
+# Wait for user interaction before proceeding to next objective
+        'navigate_without_user_interaction': False,
                 "completed_objectives": completed_objs
             }
         
