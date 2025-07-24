@@ -34,6 +34,7 @@ def demo_debug_commands():
         "Hello! I'm ready to learn Python fundamentals.",
         "What are variables in Python?",
         "/help",
+        "/debug_mode",
         "Can you explain functions?",
         "/completed"
     ]
@@ -51,10 +52,16 @@ def demo_debug_commands():
             if debug_result['success']:
                 if debug_result.get('is_help'):
                     print("🤖 Assistant: " + debug_result['message'].replace('\n', '\n             '))
+                elif debug_result.get('is_debug_mode_toggle'):
+                    print("🤖 Assistant: " + debug_result['message'].replace('\n', '\n             '))
                 else:
                     print("🤖 Assistant: " + debug_result['message'])
                     print("🎉 Session completed with debug command!")
                     print(f"📊 Score: {int(debug_result['score'] * 100)}%")
+                    if debug_result.get('debug_info'):
+                        print("🔧 Debug Info:")
+                        for key, value in debug_result['debug_info'].items():
+                            print(f"   {key}: {value}")
                     print("🔄 Ready to move to next topic...")
                     break
             else:
@@ -74,10 +81,12 @@ def demo_debug_commands():
     print("✅ Demo completed!")
     print("\n📋 Summary of Debug Features:")
     print("• `/completed` - Instantly complete current lesson with high score")
-    print("• `/help` or `/debug` - Show available debug commands") 
+    print("• `/help` or `/debug` - Show available debug commands")
+    print("• `/debug_mode` - Toggle debug mode to see detailed scoring info") 
     print("• Case-insensitive command detection")
     print("• Non-intrusive - only activates on specific commands")
     print("• Maintains learning progress and mastery scores")
+    print("• Shows scoring methodology when debug mode is enabled")
 
 if __name__ == "__main__":
     demo_debug_commands()

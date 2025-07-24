@@ -322,6 +322,16 @@ if not is_completed:
                     # Display help message
                     with st.chat_message("assistant"):
                         st.markdown(debug_result['message'])
+                elif debug_result.get('is_debug_mode_toggle'):
+                    # Add debug mode toggle message to chat history
+                    st.session_state.history.append({
+                        "role": "assistant", 
+                        "content": debug_result['message']
+                    })
+                    
+                    # Display debug mode toggle message
+                    with st.chat_message("assistant"):
+                        st.markdown(debug_result['message'])
                 else:
                     # Add system message about debug completion
                     st.session_state.history.append({
@@ -334,6 +344,11 @@ if not is_completed:
                         st.markdown(debug_result['message'])
                         st.balloons()
                         st.success(f"🎉 **Debug Session Complete!** Score: {int(debug_result['score'] * 100)}%")
+                        
+                        # Show debug info if debug mode is enabled
+                        if debug_result.get('debug_info'):
+                            with st.expander("🔧 Debug Scoring Information", expanded=True):
+                                st.json(debug_result['debug_info'])
                         
                         # Show completion buttons
                         col1, col2 = st.columns(2)
@@ -382,6 +397,21 @@ if not is_completed:
                         if result['is_completed']:
                             st.balloons()
                             st.success(f"🎉 **Session Complete!** Your score: {int(result['final_score'] * 100)}%")
+                            
+                            # Show debug info if debug mode is enabled
+                            from backend.debug_commands import is_debug_mode_enabled
+                            if is_debug_mode_enabled():
+                                with st.expander("🔧 Normal Session Scoring Information", expanded=True):
+                                    scoring_info = {
+                                        'scoring_method': 'AI_LLM_GRADING',
+                                        'final_score': result['final_score'],
+                                        'scoring_description': 'AI (LLM) evaluated your quiz answers and calculated this score',
+                                        'debug_mode_note': 'This is a NORMAL session - scores are calculated by AI, not hardcoded'
+                                    }
+                                    if 'debug_info' in result:
+                                        scoring_info.update(result['debug_info'])
+                                    st.json(scoring_info)
+                            
                             # Show completion buttons
                             col1, col2 = st.columns(2)
                             with col1:

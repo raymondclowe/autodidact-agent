@@ -17,10 +17,46 @@ Force completes the current learning session with a high score (85%).
 Type `/completed` in the chat input during any active learning session.
 
 ### `/help` or `/debug`
-Shows a help message with available debug commands.
+Shows a help message with available debug commands and current debug mode status.
 
 **Usage:**
 Type `/help` or `/debug` in the chat input to see the available commands.
+
+### `/debug_mode`
+**NEW**: Toggles debug mode on/off to show detailed scoring information.
+
+**What it does:**
+- Enables/disables verbose debug information display
+- Shows scoring method explanations when debug mode is enabled
+- Reveals the difference between AI scoring vs hardcoded debug scoring
+
+**Usage:**
+Type `/debug_mode` to toggle debug mode. When enabled, you'll see additional technical details about how scores are calculated.
+
+## Debug Mode Features
+
+### Normal vs Debug Scoring Explanation
+
+**Normal Sessions:**
+- AI (Large Language Model) evaluates your quiz answers
+- Scores are calculated based on answer quality and understanding
+- Dynamic scoring based on actual comprehension
+
+**Debug Sessions:**
+- Uses a hardcoded 85% score for quick progression  
+- No AI evaluation - instant completion
+- Designed for testing and development workflow
+
+### Visibility Controls
+
+When **debug mode is ON** (`/debug_mode`):
+- Shows detailed scoring information in expandable sections
+- Explains whether scores came from AI evaluation or debug hardcoding
+- Displays technical metadata for developers
+
+When **debug mode is OFF** (default):
+- Standard user experience with minimal technical details
+- Clean interface focused on learning outcomes
 
 ## How It Works
 

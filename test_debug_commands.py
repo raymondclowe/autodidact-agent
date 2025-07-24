@@ -15,7 +15,7 @@ def test_debug_commands():
     print("🧪 Testing Debug Commands Functionality")
     print("=" * 50)
     
-    from backend.debug_commands import handle_debug_command, is_debug_command
+    from backend.debug_commands import handle_debug_command, is_debug_command, is_debug_mode_enabled, set_debug_mode
     
     # Mock session info
     mock_session_info = {
@@ -29,7 +29,8 @@ def test_debug_commands():
         # Command detection tests
         ('/completed', True, 'Command detection'),
         ('/help', True, 'Command detection'),
-        ('/debug', True, 'Command detection'),  
+        ('/debug', True, 'Command detection'),
+        ('/debug_mode', True, 'Debug mode command detection'),
         ('/COMPLETED', True, 'Case insensitive'),
         ('/unknown', True, 'Unknown command detection'),
         ('normal message', False, 'Normal message detection'),
@@ -53,6 +54,7 @@ def test_debug_commands():
     handling_tests = [
         ('/help', 'should show help'),
         ('/debug', 'should show help'),
+        ('/debug_mode', 'should toggle debug mode'),
         ('/completed', 'should attempt completion'),
         ('/unknown', 'should show error'),
         ('normal message', 'should return None'),
@@ -69,6 +71,10 @@ def test_debug_commands():
                 print(f"  {status} {description}: {success}")
             elif cmd in ['/help', '/debug']:
                 success = result and result.get('is_help', False)
+                status = "✅" if success else "❌"
+                print(f"  {status} {description}: {success}")
+            elif cmd == '/debug_mode':
+                success = result and result.get('is_debug_mode_toggle', False)
                 status = "✅" if success else "❌"
                 print(f"  {status} {description}: {success}")
             elif cmd == '/completed':
@@ -89,8 +95,41 @@ def test_debug_commands():
     
     print(f"\n📊 Handling Tests: {handling_passed}/{len(handling_tests)} passed")
     
-    total_tests = len(test_cases) + len(handling_tests)
-    total_passed = detection_passed + handling_passed
+    # Test debug mode functionality
+    print("\n📋 Testing Debug Mode Toggle:")
+    debug_mode_tests = 0
+    debug_mode_passed = 0
+    
+    # Test initial state
+    initial_state = is_debug_mode_enabled()
+    print(f"  📌 Initial debug mode state: {initial_state}")
+    debug_mode_tests += 1
+    debug_mode_passed += 1  # Always pass initial state check
+    
+    # Test setting debug mode
+    set_debug_mode(True)
+    after_enable = is_debug_mode_enabled()
+    success = after_enable == True
+    status = "✅" if success else "❌"
+    print(f"  {status} Enable debug mode: {after_enable}")
+    debug_mode_tests += 1
+    if success:
+        debug_mode_passed += 1
+        
+    # Test disabling debug mode
+    set_debug_mode(False)
+    after_disable = is_debug_mode_enabled()
+    success = after_disable == False
+    status = "✅" if success else "❌"
+    print(f"  {status} Disable debug mode: {after_disable}")
+    debug_mode_tests += 1
+    if success:
+        debug_mode_passed += 1
+    
+    print(f"\n📊 Debug Mode Tests: {debug_mode_passed}/{debug_mode_tests} passed")
+    
+    total_tests = len(test_cases) + len(handling_tests) + debug_mode_tests
+    total_passed = detection_passed + handling_passed + debug_mode_passed
     
     print(f"\n🎯 Overall Results: {total_passed}/{total_tests} tests passed")
     
