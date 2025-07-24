@@ -60,9 +60,25 @@ OBJECTIVE FLOW (MUST follow all)
   - Always prefer responding in socratic style over direct answers. You do not want to give the student the answer, but always to ask just the right question to help them learn to think for themselves. 
   - Only give the answer if the student asks for it or if the user asks about something different (maybe they don't understand a prerequisite). 
   - You might give a small amount of supplementary information after instructional purposes after they have answered your socratic questions.
-• Keep every reply ≤ 150 words.
+• Keep every reply ≤ 180 words to allow for proper formatting.
 • When you believe the learner has mastered this objective, append:
   `<control>{{\"objective_complete\": true}}</control>`
+
+FORMATTING REQUIREMENTS (Essential for readability)
+• **Always use markdown formatting** to make content clear and scannable
+• **For multiple choice questions:**
+  - Put the question on its own line
+  - List options as: **A)** Option text, **B)** Option text, etc.
+  - Add blank lines between question and options
+• **For explanations:** Use bullet points, numbered lists, or short paragraphs
+• **For questions:** Put them on separate lines with clear spacing
+• **Example format for multiple choice:**
+  
+  What is the main purpose of X?
+  
+  **A)** First option  
+  **B)** Second option  
+  **C)** Third option
 
 OFF-TOPIC HANDLING ✅
 If the learner asks something unrelated to this objective:
@@ -117,8 +133,14 @@ If the learner asks something unrelated to these recap objectives:
 
 STYLE & SAFETY
 • Encourage, never shame.
-• Keep each reply ≤ 150 words before the control tag.
+• Keep each reply ≤ 180 words before the control tag to allow for proper formatting.
 • Be concrete; avoid speculation.
+
+FORMATTING REQUIREMENTS (Essential for readability)
+• **Always use markdown formatting** to make content clear and scannable
+• **For numbered lists:** Use proper markdown numbering (1. 2. 3.)
+• **For questions:** Put each question on its own line with clear spacing
+• **For key points:** Use bullet points or **bold text** for emphasis
 
 BEGIN RECAP
 """
@@ -242,7 +264,10 @@ def clean_improper_citations(text: str, refs: list[dict[str, Any]]) -> str:
     # Clean up artifacts from removals (e.g., empty parens, spaces before punctuation)
     cleaned_text = re.sub(r'\s+([.,?!:;])', r'\1', cleaned_text)  # Fix space before punctuation
     cleaned_text = re.sub(r'\(\s*\)|\[\s*\]', '', cleaned_text)      # Remove empty parens/brackets
-    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()        # Normalize spaces
+    # Preserve line breaks while normalizing spaces within lines
+    cleaned_text = re.sub(r'[ \t]+', ' ', cleaned_text)  # Collapse spaces and tabs only
+    cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)  # Collapse multiple line breaks to max 2
+    cleaned_text = cleaned_text.strip()
     
     return cleaned_text
 
@@ -269,8 +294,11 @@ def remove_control_blocks(text: str) -> str:
     # Remove control blocks using the same regex pattern as extract_control_block
     cleaned_text = CONTROL_TAG_RE.sub('', text)
     
-    # Clean up any leftover whitespace or formatting artifacts
-    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+    # Clean up any leftover whitespace but preserve line breaks for formatting
+    # Only collapse multiple spaces on the same line, not line breaks
+    cleaned_text = re.sub(r'[ \t]+', ' ', cleaned_text)  # Collapse spaces and tabs only
+    cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)  # Collapse multiple line breaks to max 2
+    cleaned_text = cleaned_text.strip()
     
     return cleaned_text
 
