@@ -297,62 +297,118 @@ if not is_completed and len(st.session_state.history) == 0:
 # Accept user input (disabled for completed sessions)
 if not is_completed:
     if prompt := st.chat_input("Your response..."):
-        # Add user message to chat history
-        st.session_state.history.append({"role": "user", "content": prompt})
-        # Save state after user input
-        if 'graph_state' in st.session_state:
-            _save_state(st.session_state.graph_state)
-        # Display user message in chat message container
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        # Display assistant response in chat message container
-        with st.chat_message("assistant"):
-            with st.spinner("🤔 Thinking..."):
-                result = run_tutor_response(session_info, node_info)
-                # Save state after assistant response
-                if 'graph_state' in st.session_state:
-                    _save_state(st.session_state.graph_state)
-                if result['success']:
-                    # Display new assistant messages
-                    new_messages = st.session_state.history[-result['new_message_count']:]
-                    print(f"new_messages: {new_messages}")
-                    for msg in new_messages:
-                        if msg["role"] == "assistant":
-                            print(f"msg to be shown: {msg['content']}")
-                            st.markdown(msg["content"])
-                    print(f"result: {result}")
-                    print(f"st.session_state.history: {st.session_state.history}")
-                    # Check if session is completed
-                    if result['is_completed']:
+        # Check for debug commands first
+        from backend.debug_commands import handle_debug_command
+        debug_result = handle_debug_command(prompt, session_info)
+        
+        if debug_result:
+            # Handle debug command
+            if debug_result['success']:
+                # Add user message to chat history
+                st.session_state.history.append({"role": "user", "content": prompt})
+                
+                # Display user message in chat message container
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                
+                # Handle help vs completion commands differently
+                if debug_result.get('is_help'):
+                    # Add help message to chat history
+                    st.session_state.history.append({
+                        "role": "assistant", 
+                        "content": debug_result['message']
+                    })
+                    
+                    # Display help message
+                    with st.chat_message("assistant"):
+                        st.markdown(debug_result['message'])
+                else:
+                    # Add system message about debug completion
+                    st.session_state.history.append({
+                        "role": "assistant", 
+                        "content": debug_result['message']
+                    })
+                    
+                    # Display debug completion message
+                    with st.chat_message("assistant"):
+                        st.markdown(debug_result['message'])
                         st.balloons()
-                        st.success(f"🎉 **Session Complete!** Your score: {int(result['final_score'] * 100)}%")
+                        st.success(f"🎉 **Debug Session Complete!** Score: {int(debug_result['score'] * 100)}%")
+                        
                         # Show completion buttons
                         col1, col2 = st.columns(2)
                         with col1:
-                            if st.button("✅ Back to Project", type="primary", use_container_width=True):
+                            if st.button("✅ Back to Project", type="primary", use_container_width=True, key="debug_back"):
                                 st.session_state.selected_project_id = session_info['project_id']
                                 st.switch_page("pages/project_detail.py")
                         with col2:
-                            if st.button("📊 View Progress", type="secondary", use_container_width=True):
+                            if st.button("📊 View Progress", type="secondary", use_container_width=True, key="debug_progress"):
                                 st.session_state.selected_project_id = session_info['project_id']
                                 st.switch_page("pages/project_detail.py")
-                else:
-                    # Handle errors
-                    if result['error_type'] == 'auth':
-                        st.error("❌ API key authentication failed. Please check your API key in Settings.")
-                        if st.button("Go to Settings"):
-                            st.switch_page("pages/settings.py")
-                    elif result['error_type'] == 'rate_limit':
-                        st.error("⏳ Rate limit reached. Please wait a moment and try again.")
-                        st.info("Consider upgrading your OpenAI plan for higher rate limits.")
-                    elif result['error_type'] == 'recursion':
-                        st.error("⚠️ Session is taking too long. The conversation might be stuck in a loop.")
-                        st.info("Try refreshing the page or starting a new session.")
+                    
+                    st.stop()  # Prevent further processing for completion command
+            else:
+                # Show error for failed debug command
+                st.error(f"Debug command failed: {debug_result['error']}")
+                st.stop()
+        else:
+            # Normal message processing
+            # Add user message to chat history
+            st.session_state.history.append({"role": "user", "content": prompt})
+            # Save state after user input
+            if 'graph_state' in st.session_state:
+                _save_state(st.session_state.graph_state)
+            # Display user message in chat message container
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            # Display assistant response in chat message container
+            with st.chat_message("assistant"):
+                with st.spinner("🤔 Thinking..."):
+                    result = run_tutor_response(session_info, node_info)
+                    # Save state after assistant response
+                    if 'graph_state' in st.session_state:
+                        _save_state(st.session_state.graph_state)
+                    if result['success']:
+                        # Display new assistant messages
+                        new_messages = st.session_state.history[-result['new_message_count']:]
+                        print(f"new_messages: {new_messages}")
+                        for msg in new_messages:
+                            if msg["role"] == "assistant":
+                                print(f"msg to be shown: {msg['content']}")
+                                st.markdown(msg["content"])
+                        print(f"result: {result}")
+                        print(f"st.session_state.history: {st.session_state.history}")
+                        # Check if session is completed
+                        if result['is_completed']:
+                            st.balloons()
+                            st.success(f"🎉 **Session Complete!** Your score: {int(result['final_score'] * 100)}%")
+                            # Show completion buttons
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("✅ Back to Project", type="primary", use_container_width=True):
+                                    st.session_state.selected_project_id = session_info['project_id']
+                                    st.switch_page("pages/project_detail.py")
+                            with col2:
+                                if st.button("📊 View Progress", type="secondary", use_container_width=True):
+                                    st.session_state.selected_project_id = session_info['project_id']
+                                    st.switch_page("pages/project_detail.py")
                     else:
-                        st.error(f"❌ Error in tutor response: {result['error']}")
-                        st.info("Try refreshing the page or starting a new session.")
-                    # Show debug info in expander
-                    with st.expander("🐛 Debug Information"):
-                        st.json(result['debug_info'])
+                        # Handle errors
+                        if result['error_type'] == 'auth':
+                            st.error("❌ API key authentication failed. Please check your API key in Settings.")
+                            if st.button("Go to Settings"):
+                                st.switch_page("pages/settings.py")
+                        elif result['error_type'] == 'rate_limit':
+                            st.error("⏳ Rate limit reached. Please wait a moment and try again.")
+                            st.info("Consider upgrading your OpenAI plan for higher rate limits.")
+                        elif result['error_type'] == 'recursion':
+                            st.error("⚠️ Session is taking too long. The conversation might be stuck in a loop.")
+                            st.info("Try refreshing the page or starting a new session.")
+                        else:
+                            st.error(f"❌ Error in tutor response: {result['error']}")
+                            st.info("Try refreshing the page or starting a new session.")
+                        # Show debug info in expander
+                        with st.expander("🐛 Debug Information"):
+                            st.json(result['debug_info'])
 else:
     st.info("This session has been completed. Exit to start a new session on a different topic!")
