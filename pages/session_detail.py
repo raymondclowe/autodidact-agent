@@ -172,7 +172,7 @@ def session_info_dialog():
 
 # optional local pickle store (same as earlier helper but inline)
 _STORE = Path.home() / '.autodidact' / 'projects' / project_id / 'sessions'
-_STORE.mkdir(exist_ok=True)
+_STORE.mkdir(parents=True, exist_ok=True)
 
 def _load_state(session_id: str) -> SessionState | None:
     """Load session state from pickle file if it exists, with database fallback"""
@@ -194,14 +194,6 @@ def _load_state(session_id: str) -> SessionState | None:
         print(f"Warning: Failed to load session state from database: {e}")
     
     return None
-    fp = _STORE / f"{session_id}.pkl"
-    if not fp.exists():
-        return None
-    try:
-        return pickle.loads(fp.read_bytes())
-    except Exception as e:
-        print(f"Failed to load session state: {e}")
-        return None
 
 def _save_state(state: SessionState):
     """Save session state to both pickle file and database"""
@@ -218,11 +210,6 @@ def _save_state(state: SessionState):
         save_session_state(state['session_id'], state)
     except Exception as e:
         print(f"Warning: Failed to save session state to database: {e}")
-    fp = _STORE / f"{state['session_id']}.pkl"
-    try:
-        fp.write_bytes(pickle.dumps(state))
-    except Exception as e:
-        print(f"Failed to save session state: {e}")
 
 state: SessionState | None = _load_state(session_id)
 if state is None:

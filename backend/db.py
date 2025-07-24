@@ -637,7 +637,7 @@ def create_learning_objective(project_id: str, node_id: str, idx_in_node: int, d
 
 def get_next_nodes(project_id: str) -> List[Dict[str, Any]]:
     """
-    Get up to 2 lowest-mastery unlocked nodes.
+    Get all lowest-mastery unlocked nodes.
     A node is unlocked if all its prerequisites have mastery >= MASTERY_THRESHOLD
     """
     query = """
@@ -655,7 +655,6 @@ def get_next_nodes(project_id: str) -> List[Dict[str, Any]]:
     WHERE (prereq_count = 0 OR prereq_count = met_count)
     AND mastery < ?
     ORDER BY mastery ASC
-    LIMIT 2
     """
     
     with get_db_connection() as conn:
