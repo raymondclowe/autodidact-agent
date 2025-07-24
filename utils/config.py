@@ -17,6 +17,7 @@ load_dotenv()
 # Logging configuration
 LOG_LEVEL = os.getenv("AUTODIDACT_LOG_LEVEL", "INFO").upper()
 LOG_FILE = os.getenv("AUTODIDACT_LOG_FILE", None)
+DEBUG_LOG_FILE = None  # Will be set when debug mode is enabled
 
 def configure_logging():
     handlers = [logging.StreamHandler()]
@@ -27,6 +28,37 @@ def configure_logging():
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         handlers=handlers
     )
+
+def configure_debug_logging():
+    """Configure enhanced logging for debug mode with persistent file logging"""
+    global DEBUG_LOG_FILE
+    from datetime import datetime
+    
+    # Create debug log file with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    DEBUG_LOG_FILE = CONFIG_DIR / f"debug-{timestamp}.log"
+    
+    # Ensure config directory exists
+    ensure_config_directory()
+    
+    # Configure logging with both console and file output, debug level
+    handlers = [
+        logging.StreamHandler(),
+        logging.FileHandler(DEBUG_LOG_FILE, encoding='utf-8')
+    ]
+    
+    # Set up root logger with debug level and detailed formatting
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s %(levelname)s [%(name)s:%(lineno)d] %(message)s",
+        handlers=handlers,
+        force=True  # Override any existing logging configuration
+    )
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"Debug mode enabled - logging to {DEBUG_LOG_FILE}")
+    
+    return DEBUG_LOG_FILE
 
 configure_logging()
 

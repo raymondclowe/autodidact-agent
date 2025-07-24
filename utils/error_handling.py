@@ -6,9 +6,125 @@ Provides enhanced error parsing and user-friendly error messages
 import json
 import re
 import logging
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+def create_incident_file(error_details: Dict, context: str, additional_info: Dict = None) -> str:
+    """
+    Create an incident file for major errors with unique identifier.
+    
+    Args:
+        error_details: Dict with extracted error information
+        context: Context where the error occurred
+        additional_info: Additional debugging information
+        
+    Returns:
+        Path to the created incident file
+    """
+    from utils.config import CONFIG_DIR, ensure_config_directory
+    
+    ensure_config_directory()
+    
+    # Create incident file with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    incident_file = CONFIG_DIR / f"incident-{timestamp}.log"
+    
+    # Collect comprehensive incident information
+    incident_data = {
+        "timestamp": datetime.now().isoformat(),
+        "context": context,
+        "error_details": error_details,
+        "additional_info": additional_info or {},
+        "system_info": {
+            "python_version": f"{os.sys.version}",
+            "platform": f"{os.name}",
+            "working_directory": str(Path.cwd()),
+            "environment_vars": {
+                key: value for key, value in os.environ.items() 
+                if key.startswith(('AUTODIDACT_', 'OPENAI_', 'OPENROUTER_'))
+                and not key.endswith('_API_KEY')  # Don't log API keys
+            }
+        }
+    }
+    
+    # Write incident file with both JSON and human-readable format
+    try:
+        with open(incident_file, 'w', encoding='utf-8') as f:
+            f.write("="*80 + "\n")
+            f.write(f"AUTODIDACT INCIDENT REPORT - {timestamp}\n")
+            f.write("="*80 + "\n\n")
+            
+            f.write(f"INCIDENT TIME: {incident_data['timestamp']}\n")
+            f.write(f"CONTEXT: {context}\n\n")
+            
+            f.write("ERROR DETAILS:\n")
+            f.write("-" * 40 + "\n")
+            for key, value in error_details.items():
+                f.write(f"{key.upper()}: {value}\n")
+            f.write("\n")
+            
+            if additional_info:
+                f.write("ADDITIONAL INFORMATION:\n")
+                f.write("-" * 40 + "\n")
+                for key, value in additional_info.items():
+                    f.write(f"{key.upper()}: {value}\n")
+                f.write("\n")
+            
+            f.write("SYSTEM INFORMATION:\n")
+            f.write("-" * 40 + "\n")
+            for key, value in incident_data['system_info'].items():
+                if isinstance(value, dict):
+                    f.write(f"{key.upper()}:\n")
+                    for subkey, subvalue in value.items():
+                        f.write(f"  {subkey}: {subvalue}\n")
+                else:
+                    f.write(f"{key.upper()}: {value}\n")
+            f.write("\n")
+            
+            f.write("FULL JSON DATA:\n")
+            f.write("-" * 40 + "\n")
+            f.write(json.dumps(incident_data, indent=2, default=str))
+        
+        logger.error(f"Incident file created: {incident_file}")
+        return str(incident_file)
+        
+    except Exception as e:
+        logger.error(f"Failed to create incident file: {e}")
+        return None
+
+
+def log_major_error(error_obj, context: str, additional_info: Dict = None) -> Tuple[str, bool, str]:
+    """
+    Log a major error and create an incident file.
+    
+    Args:
+        error_obj: Error object or exception
+        context: Context where the error occurred
+        additional_info: Additional debugging information
+        
+    Returns:
+        Tuple of (error_message, is_retryable, incident_file_path)
+    """
+    # Extract detailed error information
+    error_details = extract_error_details(error_obj)
+    
+    # Create incident file for major errors
+    incident_file = create_incident_file(error_details, context, additional_info)
+    
+    # Create enhanced error message
+    error_message, is_retryable = create_enhanced_error_message(error_details, context)
+    
+    # Log to main logger
+    logger.error(f"Major error in {context}: {error_details.get('message', 'Unknown error')}")
+    if incident_file:
+        logger.error(f"Incident report saved to: {incident_file}")
+    
+    return error_message, is_retryable, incident_file
 
 
 def parse_openrouter_error(response) -> Optional[Dict]:
@@ -429,17 +545,28 @@ def handle_api_error(response, context: str = "API call") -> Tuple[str, bool]:
         error_type = error_info.get('error_type', '')
         is_retryable = error_type in ['rate_limit_exceeded', 'temporary_unavailable']
         
-        logger.error(f"OpenRouter error in {context}: {error_info}")
+        # For major errors, create incident file
+        if error_type in ['requested_too_many_tokens', 'insufficient_quota', 'model_not_found']:
+            additional_info = {"openrouter_error_info": error_info}
+            _, _, incident_file = log_major_error(response, context, additional_info)
+            if incident_file:
+                user_message += f"\n\n📋 **Incident Report:** {incident_file}"
+        else:
+            logger.error(f"OpenRouter error in {context}: {error_info}")
+        
         return user_message, is_retryable
     
     # Enhanced fallback: Extract detailed error information
     error_details = extract_error_details(response)
     
-    # Log the extracted details for debugging
-    logger.error(f"API error in {context} - Details: {error_details}")
+    # For unknown errors, create incident file
+    additional_info = {"response_type": type(response).__name__}
+    enhanced_message, is_retryable, incident_file = log_major_error(response, context, additional_info)
     
-    # Create enhanced error message
-    return create_enhanced_error_message(error_details, context)
+    if incident_file:
+        enhanced_message += f"\n\n📋 **Incident Report:** {incident_file}"
+    
+    return enhanced_message, is_retryable
 
 
 def estimate_token_count(text: str) -> int:
