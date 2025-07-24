@@ -172,7 +172,7 @@ def session_info_dialog():
 
 # optional local pickle store (same as earlier helper but inline)
 _STORE = Path.home() / '.autodidact' / 'projects' / project_id / 'sessions'
-_STORE.mkdir(exist_ok=True)
+_STORE.mkdir(parents=True, exist_ok=True)
 
 def _load_state(session_id: str) -> SessionState | None:
     """Load session state from pickle file if it exists, with database fallback"""
