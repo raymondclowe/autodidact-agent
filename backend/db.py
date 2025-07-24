@@ -607,6 +607,34 @@ def complete_session(session_id: str, final_score: float):
         conn.commit()
 
 
+def create_node(project_id: str, original_id: str, label: str, summary: str) -> str:
+    """Create a new node and return its ID"""
+    node_id = str(uuid.uuid4())
+    
+    with get_db_connection() as conn:
+        conn.execute("""
+            INSERT INTO node (id, project_id, original_id, label, summary, mastery, references_sections_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (node_id, project_id, original_id, label, summary, 0.0, '[]'))
+        conn.commit()
+    
+    return node_id
+
+
+def create_learning_objective(project_id: str, node_id: str, idx_in_node: int, description: str) -> str:
+    """Create a new learning objective and return its ID"""
+    lo_id = str(uuid.uuid4())
+    
+    with get_db_connection() as conn:
+        conn.execute("""
+            INSERT INTO learning_objective (id, project_id, node_id, idx_in_node, description, mastery)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (lo_id, project_id, node_id, idx_in_node, description, 0.0))
+        conn.commit()
+    
+    return lo_id
+
+
 def get_next_nodes(project_id: str) -> List[Dict[str, Any]]:
     """
     Get up to 2 lowest-mastery unlocked nodes.
@@ -654,6 +682,31 @@ def update_mastery(node_id: str, lo_scores: Dict[str, float]):
                     "UPDATE learning_objective SET mastery = ? WHERE id = ?",
                     (new_mastery, lo_id)
                 )
+        
+        # Calculate node mastery as average of all LOs
+        cursor = conn.execute("""
+            SELECT AVG(mastery) FROM learning_objective WHERE node_id = ?
+        """, (node_id,))
+        avg_mastery = cursor.fetchone()[0] or 0.0
+        
+        # Update node mastery
+        conn.execute(
+            "UPDATE node SET mastery = ? WHERE id = ?",
+            (avg_mastery, node_id)
+        )
+        
+        conn.commit()
+
+
+def update_mastery_direct(node_id: str, lo_scores: Dict[str, float]):
+    """Update learning objective and node mastery scores directly (for debug completions)"""
+    with get_db_connection() as conn:
+        # Update each LO mastery directly without averaging
+        for lo_id, score in lo_scores.items():
+            conn.execute(
+                "UPDATE learning_objective SET mastery = ? WHERE id = ?",
+                (score, lo_id)
+            )
         
         # Calculate node mastery as average of all LOs
         cursor = conn.execute("""

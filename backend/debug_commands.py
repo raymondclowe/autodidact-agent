@@ -5,7 +5,7 @@ Provides cheat commands for developers to quickly progress through lessons
 
 import logging
 from typing import Dict, Any, Optional
-from backend.db import complete_session, update_mastery, get_node_with_objectives
+from backend.db import complete_session, update_mastery, update_mastery_direct, get_node_with_objectives
 
 # Constants
 DEBUG_SCORE = 0.85  # Default score for debug completions (85%)
@@ -61,9 +61,9 @@ def force_complete_session(session_id: str, node_id: str) -> Dict[str, Any]:
         # Create learning objective scores - set all to high mastery
         lo_scores = {lo['id']: debug_score for lo in node_info.get('learning_objectives', [])}
         
-        # Update mastery scores
+        # Update mastery scores (use direct update for debug completion)
         if lo_scores:
-            update_mastery(node_id, lo_scores)
+            update_mastery_direct(node_id, lo_scores)
         
         # Complete the session
         complete_session(session_id, debug_score)
