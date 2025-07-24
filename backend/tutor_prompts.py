@@ -264,7 +264,10 @@ def clean_improper_citations(text: str, refs: list[dict[str, Any]]) -> str:
     # Clean up artifacts from removals (e.g., empty parens, spaces before punctuation)
     cleaned_text = re.sub(r'\s+([.,?!:;])', r'\1', cleaned_text)  # Fix space before punctuation
     cleaned_text = re.sub(r'\(\s*\)|\[\s*\]', '', cleaned_text)      # Remove empty parens/brackets
-    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()        # Normalize spaces
+    # Preserve line breaks while normalizing spaces within lines
+    cleaned_text = re.sub(r'[ \t]+', ' ', cleaned_text)  # Collapse spaces and tabs only
+    cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)  # Collapse multiple line breaks to max 2
+    cleaned_text = cleaned_text.strip()
     
     return cleaned_text
 
@@ -291,8 +294,11 @@ def remove_control_blocks(text: str) -> str:
     # Remove control blocks using the same regex pattern as extract_control_block
     cleaned_text = CONTROL_TAG_RE.sub('', text)
     
-    # Clean up any leftover whitespace or formatting artifacts
-    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+    # Clean up any leftover whitespace but preserve line breaks for formatting
+    # Only collapse multiple spaces on the same line, not line breaks
+    cleaned_text = re.sub(r'[ \t]+', ' ', cleaned_text)  # Collapse spaces and tabs only
+    cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)  # Collapse multiple line breaks to max 2
+    cleaned_text = cleaned_text.strip()
     
     return cleaned_text
 
