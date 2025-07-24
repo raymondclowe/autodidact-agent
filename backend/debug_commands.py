@@ -3,11 +3,18 @@ Debug commands for skipping lessons and sessions
 Provides cheat commands for developers to quickly progress through lessons
 """
 
+import logging
 from typing import Dict, Any, Optional
 from backend.db import complete_session, update_mastery, get_node_with_objectives
 
+# Constants
+DEBUG_SCORE = 0.85  # Default score for debug completions (85%)
+
 # Global debug mode state
 _debug_mode_enabled = False
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 def is_debug_command(message: str) -> bool:
@@ -39,9 +46,9 @@ def force_complete_session(session_id: str, node_id: str) -> Dict[str, Any]:
         Dict with completion status and details
     """
     try:
-        # Set a high score for debug completion (0.85 = 85%)
+        # Set a high score for debug completion
         # This is a HARDCODED score for debug purposes - different from normal scoring
-        debug_score = 0.85
+        debug_score = DEBUG_SCORE
         
         # Get node information to update learning objectives
         node_info = get_node_with_objectives(node_id)
@@ -52,10 +59,7 @@ def force_complete_session(session_id: str, node_id: str) -> Dict[str, Any]:
             }
         
         # Create learning objective scores - set all to high mastery
-        lo_scores = {}
-        for lo in node_info.get('learning_objectives', []):
-            # Set high mastery (0.85) for all learning objectives
-            lo_scores[lo['id']] = debug_score
+        lo_scores = {lo['id']: debug_score for lo in node_info.get('learning_objectives', [])}
         
         # Update mastery scores
         if lo_scores:
@@ -81,6 +85,7 @@ def force_complete_session(session_id: str, node_id: str) -> Dict[str, Any]:
         }
         
     except Exception as e:
+        logger.error(f"Error in force_complete_session for session {session_id}: {e}", exc_info=True)
         return {
             'success': False,
             'error': str(e)
@@ -116,7 +121,7 @@ def handle_debug_command(message: str, session_info: Dict[str, Any]) -> Optional
             'success': True,
             'message': f"""🔧 **Debug Commands Available:**
 
-• `/completed` - Force complete the current session with high score (85%)
+• `/completed` - Force complete the current session with high score ({int(DEBUG_SCORE * 100)}%)
 • `/help` or `/debug` - Show this help message
 • `/debug_mode` - Toggle debug mode {debug_status}
 
@@ -141,7 +146,7 @@ These commands are intended for developers and testing purposes to quickly progr
 
 **Scoring Methods Explained:**
 • **Normal Sessions**: AI (LLM) evaluates your quiz answers and calculates scores
-• **Debug Sessions**: Uses hardcoded 85% score for quick progression
+• **Debug Sessions**: Uses hardcoded {int(DEBUG_SCORE * 100)}% score for quick progression
 
 Debug mode is now {status.lower()}.""",
             'is_debug_mode_toggle': True

@@ -13,6 +13,7 @@ from backend.graph_v05 import (
   SessionState,
   session_graph
 )
+from backend.debug_commands import handle_debug_command
 
 from pathlib import Path
 import pickle
@@ -298,19 +299,22 @@ if not is_completed and len(st.session_state.history) == 0:
 if not is_completed:
     if prompt := st.chat_input("Your response..."):
         # Check for debug commands first
-        from backend.debug_commands import handle_debug_command
         debug_result = handle_debug_command(prompt, session_info)
+        
+        # Add user message to chat history (common to both paths)
+        st.session_state.history.append({"role": "user", "content": prompt})
+        
+        # Save state after user input for normal messages
+        if not debug_result and 'graph_state' in st.session_state:
+            _save_state(st.session_state.graph_state)
+        
+        # Display user message in chat message container (common to both paths)
+        with st.chat_message("user"):
+            st.markdown(prompt)
         
         if debug_result:
             # Handle debug command
             if debug_result['success']:
-                # Add user message to chat history
-                st.session_state.history.append({"role": "user", "content": prompt})
-                
-                # Display user message in chat message container
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-                
                 # Handle help vs completion commands differently
                 if debug_result.get('is_help'):
                     # Add help message to chat history
@@ -368,14 +372,6 @@ if not is_completed:
                 st.stop()
         else:
             # Normal message processing
-            # Add user message to chat history
-            st.session_state.history.append({"role": "user", "content": prompt})
-            # Save state after user input
-            if 'graph_state' in st.session_state:
-                _save_state(st.session_state.graph_state)
-            # Display user message in chat message container
-            with st.chat_message("user"):
-                st.markdown(prompt)
             # Display assistant response in chat message container
             with st.chat_message("assistant"):
                 with st.spinner("🤔 Thinking..."):
@@ -415,11 +411,11 @@ if not is_completed:
                             # Show completion buttons
                             col1, col2 = st.columns(2)
                             with col1:
-                                if st.button("✅ Back to Project", type="primary", use_container_width=True):
+                                if st.button("✅ Back to Project", type="primary", use_container_width=True, key="normal_back"):
                                     st.session_state.selected_project_id = session_info['project_id']
                                     st.switch_page("pages/project_detail.py")
                             with col2:
-                                if st.button("📊 View Progress", type="secondary", use_container_width=True):
+                                if st.button("📊 View Progress", type="secondary", use_container_width=True, key="normal_progress"):
                                     st.session_state.selected_project_id = session_info['project_id']
                                     st.switch_page("pages/project_detail.py")
                     else:
