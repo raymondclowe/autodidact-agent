@@ -71,8 +71,8 @@ streamlit run app.py
 
 On first run, you'll need to choose an AI provider and provide your API key. The app supports:
 
+- **OpenRouter**: Access to multiple models (Claude, Gemini, Perplexity) with deep research via Perplexity Sonar
 - **OpenAI**: Full features including deep research with web search
-- **OpenRouter**: Access to multiple models (Claude, Gemini, etc.) without deep research
 
 The app will guide you through the setup process and store your configuration securely at `~/.autodidact/.env.json`.
 
@@ -103,13 +103,23 @@ Autodidact supports multiple AI providers to give you flexibility in model choic
 
 ### Provider Comparison
 
-| Feature | OpenAI | OpenRouter |
-|---------|---------|------------|
-| **Deep Research** | ✅ o4-mini-deep-research | ❌ (uses Claude Sonnet) |
-| **Web Search** | ✅ Built-in | ❌ |
-| **Chat Models** | GPT-4o-mini | Claude 3.5 Sonnet/Haiku, Gemini |
-| **Cost Range** | $0.50-2.00 (research), $0.02-0.05 (chat) | $0.001-0.05 per request |
-| **Best For** | Comprehensive research projects | High-quality conversations, cost optimization |
+| Feature | OpenRouter | OpenAI |
+|---------|------------|---------|
+| **Deep Research** | ✅ Perplexity Sonar Deep Research | ✅ o4-mini-deep-research |
+| **Web Search** | ✅ Built-in via Perplexity | ✅ Built-in |
+| **Chat Models** | Claude 3.5 Sonnet/Haiku, Gemini | GPT-4o-mini |
+| **Cost Range** | $0.001-0.05 per request | $0.50-2.00 (research), $0.02-0.05 (chat) |
+| **Best For** | Model diversity, cost optimization, access to latest models | OpenAI-specific features and workflows |
+
+### OpenRouter Provider
+- **Features**: Access to Claude, Gemini, Perplexity and other top models with deep research capabilities
+- **Models**:
+  - `perplexity/sonar-deep-research` for comprehensive research with web search
+  - `anthropic/claude-3.5-haiku` for fast, cost-effective conversations
+  - Many other models available (Gemini, GPT variants, etc.)
+- **Setup**: Get API key from [OpenRouter](https://openrouter.ai/keys)
+- **API Key Format**: Starts with `sk-or-`
+- **Best for**: Users who want model diversity, potentially lower costs, or prefer Claude/Gemini/Perplexity
 
 ### OpenAI Provider
 - **Features**: Full deep research with web search capabilities
@@ -118,25 +128,15 @@ Autodidact supports multiple AI providers to give you flexibility in model choic
   - `gpt-4o-mini` for interactive tutoring sessions
 - **Setup**: Get API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 - **API Key Format**: Starts with `sk-`
-- **Best for**: Users who need comprehensive research with real-time web data
-
-### OpenRouter Provider
-- **Features**: Access to Claude, Gemini, and other top models from multiple providers
-- **Models**:
-  - `anthropic/claude-3.5-sonnet` for complex reasoning (fallback for research)
-  - `anthropic/claude-3.5-haiku` for fast, cost-effective conversations
-  - Many other models available (Gemini, GPT variants, etc.)
-- **Setup**: Get API key from [OpenRouter](https://openrouter.ai/keys)
-- **API Key Format**: Starts with `sk-or-`
-- **Best for**: Users who want model diversity, potentially lower costs, or prefer Claude/Gemini
+- **Best for**: Users who need OpenAI-specific features and models
 
 ### Provider Setup Examples
 
 #### Initial Setup (New Users)
 When you first run Autodidact, you'll see a provider selection dialog:
 
-1. **Choose OpenAI** for comprehensive research capabilities
-2. **Choose OpenRouter** for model diversity and cost optimization
+1. **Choose OpenRouter** for model diversity, cost optimization, and access to the latest models
+2. **Choose OpenAI** for OpenAI-specific features and workflows
 3. Enter your API key when prompted
 4. The app validates your key and saves the configuration
 
@@ -146,9 +146,9 @@ You can configure multiple providers and switch between them:
 ```bash
 # Your config will be stored at ~/.autodidact/.env.json
 {
-  "provider": "openai",
-  "openai_api_key": "sk-your-openai-key",
-  "openrouter_api_key": "sk-or-your-openrouter-key"
+  "provider": "openrouter",
+  "openrouter_api_key": "sk-or-your-openrouter-key",
+  "openai_api_key": "sk-your-openai-key"
 }
 ```
 
@@ -197,8 +197,8 @@ else:
     print(f"Using {model} for research (no deep research available)")
 
 # Switch providers programmatically
-set_current_provider("openrouter")  # Switch to OpenRouter
-set_current_provider("openai")      # Switch back to OpenAI
+set_current_provider("openrouter")  # Switch to OpenRouter 
+set_current_provider("openai")      # Switch to OpenAI
 ```
 
 #### Multi-Provider Workflows
@@ -206,38 +206,38 @@ set_current_provider("openai")      # Switch back to OpenAI
 from utils.providers import create_client
 from utils.config import set_current_provider
 
-# Use OpenAI for research phase
-set_current_provider("openai")
+# Use OpenRouter for research phase (Perplexity Sonar Deep Research)
+set_current_provider("openrouter")
 research_client = create_client()
 research_response = research_client.chat.completions.create(
-    model="o4-mini-deep-research-2025-06-26",
+    model="perplexity/sonar-deep-research",
     messages=[{"role": "user", "content": "Research latest developments in AI"}]
 )
 
-# Switch to OpenRouter for tutoring (potentially lower cost)
-set_current_provider("openrouter") 
-tutor_client = create_client()
-tutor_response = tutor_client.chat.completions.create(
-    model="anthropic/claude-3.5-haiku",
-    messages=[{"role": "user", "content": "Explain this research in simple terms"}]
+# Switch to OpenAI for alternative approach
+set_current_provider("openai") 
+openai_client = create_client()
+openai_response = openai_client.chat.completions.create(
+    model="o4-mini-deep-research-2025-06-26",
+    messages=[{"role": "user", "content": "Research latest developments in AI"}]
 )
 ```
 
 ### Usage Recommendations
 
 #### For Beginners
-- **Start with OpenAI** if you want the full feature set including deep research
-- **Start with OpenRouter** if you prefer Claude/Gemini models or want lower costs
+- **Start with OpenRouter** if you want access to multiple top models and cost-effective deep research
+- **Start with OpenAI** if you prefer OpenAI-specific models and workflows
 
 #### For Cost Optimization
-- **Research Phase**: Use OpenAI for comprehensive research with web search
-- **Learning Phase**: Switch to OpenRouter for interactive tutoring sessions
+- **Research Phase**: Use OpenRouter for comprehensive research with Perplexity Sonar
+- **Learning Phase**: Continue with OpenRouter for interactive tutoring sessions with Claude
 - **Monitor usage** in your provider dashboards to track costs
 
 #### For Model Experimentation
 - Configure both providers to access different model families
-- **OpenAI**: Access to latest GPT models and deep research
-- **OpenRouter**: Access to Claude, Gemini, and many other models
+- **OpenRouter**: Access to Claude, Gemini, Perplexity Sonar, and many other models
+- **OpenAI**: Access to latest GPT models and o4 deep research
 
 ### Troubleshooting
 
@@ -257,16 +257,16 @@ You can configure multiple providers and switch between them anytime in Settings
 
 ### New Users - Choose Your Provider
 
-1. **For comprehensive research with web search**: Choose **OpenAI**
-   ```bash
-   # Get API key from https://platform.openai.com/api-keys
-   # Format: sk-...
-   ```
-
-2. **For model diversity and cost optimization**: Choose **OpenRouter**
+1. **For model diversity and cost optimization**: Choose **OpenRouter**
    ```bash
    # Get API key from https://openrouter.ai/keys  
    # Format: sk-or-...
+   ```
+
+2. **For OpenAI-specific features**: Choose **OpenAI**
+   ```bash
+   # Get API key from https://platform.openai.com/api-keys
+   # Format: sk-...
    ```
 
 3. **Run the application**:

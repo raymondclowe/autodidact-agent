@@ -1,4 +1,4 @@
-# Architecture Notes: OpenRouter Integration & Future Extensions
+# Architecture Notes: Multi-Provider System & Perplexity Integration
 
 ## Current Provider Architecture
 
@@ -11,83 +11,55 @@ The provider abstraction layer in `utils/providers.py` is designed for extensibi
 
 ### Current Provider Support Matrix
 
-| Feature | OpenAI | OpenRouter | Future Extension Point |
-|---------|--------|------------|----------------------|
-| Deep Research | ✅ Native | ❌ → Chat fallback | Could add web search tool |
-| Web Search | ✅ Built-in | ❌ | **Future integration point** |
-| Background Jobs | ✅ | ❌ → Immediate response | N/A |
+| Feature | OpenRouter | OpenAI | Future Extension Point |
+|---------|------------|--------|----------------------|
+| Deep Research | ✅ Perplexity Sonar | ✅ Native | Additional research models |
+| Web Search | ✅ Via Perplexity | ✅ Built-in | Alternative search tools |
+| Background Jobs | ✅ | ✅ | N/A |
 | Multiple Models | ✅ | ✅ | Easy to extend |
 
-## Future Web Search Integration Architecture
+## Perplexity Integration Architecture
 
-### Design Considerations for Web Search Tool
+### Design Implementation
+OpenRouter now provides deep research capabilities through Perplexity Sonar Deep Research, which eliminated the need for external web search tool integration:
 
-Raymond noted that OpenRouter models may need a web search tool to compensate for lack of built-in search. The current architecture is ready for this:
-
-#### 1. Provider Capability Detection
+#### 1. Provider Capability Implementation
 ```python
-# Already implemented in utils/providers.py
+# Implemented in utils/providers.py
 def get_provider_info(provider: str) -> Dict:
     return {
         "openrouter": {
-            "supports_web_search": False,  # Could become True with tool integration
+            "supports_deep_research": True,   # Now supported via Perplexity Sonar
+            "supports_web_search": True,     # Via Perplexity models
             # ... other capabilities
         }
     }
 ```
 
-#### 2. Extension Points
-
-**A. Tool Integration Layer** (Future)
-- Could add `utils/web_search.py` for external search APIs (SerpAPI, Bing, etc.)
-- Provider abstraction would detect and route accordingly
-- OpenAI uses built-in, OpenRouter uses external tool
-
-**B. Prompt Enhancement** (Future)
-- For providers without web search, could pre-process topics with web search
-- Inject search results into the research prompt
-- Maintain same interface for end users
-
-**C. Model Selection Strategy** (Future)
+#### 2. Model Configuration
 ```python
-def get_model_for_task(task: str, provider: str = None) -> str:
-    # Current: Returns appropriate model
-    # Future: Could return model + tool configuration
-    if task == "deep_research" and not supports_native_search(provider):
-        return {
-            "model": get_chat_model(provider),
-            "tools": ["web_search"],
-            "preprocessing": ["search_augmentation"]
-        }
+PROVIDER_MODELS = {
+    "openrouter": {
+        "deep_research": "perplexity/sonar-deep-research",  # Perplexity Sonar Pro Deep Research
+        "chat": "anthropic/claude-3.5-haiku",
+        # ...
+    }
+}
 ```
 
-### Integration Strategy
-
-When web search tool becomes necessary:
-
-1. **Minimal Changes Required**
-   - Add web search utility in `utils/`
-   - Update provider info to reflect new capabilities
-   - Enhance research prompts with search context
-   - Existing interface remains unchanged
-
-2. **Backward Compatibility**
-   - OpenAI continues using native search
-   - OpenRouter gains web search capabilities
-   - Users experience consistent functionality
-
-3. **Configuration**
-   - Could add web search API key management
-   - Provider switching remains seamless
-   - Cost transparency maintained
+### Integration Benefits
+- **Native Deep Research**: OpenRouter users get comprehensive web search and research
+- **Unified Experience**: Same capabilities across providers with different underlying implementations
+- **Cost Optimization**: Access to multiple model providers at competitive pricing
+- **Model Diversity**: Access to Claude, Gemini, Perplexity, and other models
 
 ## Current Implementation Strengths
 
 ### Provider Abstraction Benefits
 - **Zero Breaking Changes**: Existing OpenAI setups unaffected
-- **Clean Fallbacks**: OpenRouter automatically uses best available approach
+- **Feature Parity**: Both providers now support deep research and web search
 - **Future-Ready**: Easy to add new providers or capabilities
-- **Consistent UX**: Same interface regardless of provider limitations
+- **Consistent UX**: Same interface regardless of provider implementation
 
 ### Error Handling & Resilience
 - Provider-specific error messages
@@ -102,10 +74,10 @@ When web search tool becomes necessary:
 
 ## Recommendation
 
-The current architecture is well-positioned for future web search integration. When that becomes necessary:
+The current architecture successfully provides feature parity across providers through the Perplexity Sonar integration. Future enhancements could include:
 
-1. **Phase 1**: Add external web search utility as optional enhancement
-2. **Phase 2**: Integrate search preprocessing for OpenRouter research tasks
-3. **Phase 3**: Expand to additional search providers/tools as needed
+1. **Phase 1**: Additional research model integrations from other providers
+2. **Phase 2**: Alternative deep research implementations 
+3. **Phase 3**: Enhanced model-specific optimizations and features
 
-The provider abstraction layer ensures this integration will be clean and non-disruptive to existing functionality.
+The provider abstraction layer ensures any future integrations will be clean and non-disruptive to existing functionality.
