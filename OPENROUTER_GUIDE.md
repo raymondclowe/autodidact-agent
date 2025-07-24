@@ -6,8 +6,8 @@ This document explains how to use the new OpenRouter provider support in Autodid
 
 Autodidact now supports multiple AI providers:
 
+- **OpenRouter**: Access to Claude, Gemini, Perplexity and other top models with deep research
 - **OpenAI**: Full deep research capabilities with web search
-- **OpenRouter**: Access to Claude, Gemini, and other top models
 
 ## Setup
 
@@ -15,8 +15,8 @@ Autodidact now supports multiple AI providers:
 
 When you first run Autodidact, you'll see a provider selection dialog. You can choose between:
 
-- **OpenAI**: Best for comprehensive research with web search capabilities
-- **OpenRouter**: Best for diverse model options and potentially lower costs
+- **OpenRouter**: Best for diverse model options, cost optimization, and access to latest models
+- **OpenAI**: Best for OpenAI-specific features and workflows
 
 ### 2. Get an API Key
 
@@ -45,11 +45,12 @@ When you first run Autodidact, you'll see a provider selection dialog. You can c
 - ✅ Background job processing
 
 ### OpenRouter Features
+- ✅ Deep Research with Perplexity Sonar
 - ✅ Claude 3.5 Sonnet/Haiku models
 - ✅ Access to Gemini, GPT, and other models
 - ✅ Competitive pricing
-- ❌ No deep research mode (uses regular chat completion)
-- ❌ No background job processing
+- ✅ Web search capabilities via Perplexity
+- ✅ Background job processing
 
 ## Switching Providers
 
@@ -69,8 +70,8 @@ Each provider has predefined model configurations:
 - Deep Research: `o4-mini-deep-research-2025-06-26`
 
 ### OpenRouter Models
+- Deep Research: `perplexity/sonar-deep-research`
 - Chat: `anthropic/claude-3.5-haiku`
-- Research: `anthropic/claude-3.5-sonnet` (used instead of deep research)
 
 ## Cost Comparison
 
@@ -81,9 +82,10 @@ Each provider has predefined model configurations:
 
 ### OpenRouter Pricing (approximate)
 - Varies by model chosen
+- Perplexity Sonar Deep Research: ~$0.01-0.05 per research query
 - Claude Haiku: ~$0.001 per request
 - Claude Sonnet: ~$0.01-0.05 per request
-- Generally more cost-effective for chat interactions
+- Generally more cost-effective for most interactions
 
 ## Technical Details
 
@@ -121,8 +123,8 @@ All provider configurations are stored in `~/.autodidact/.env.json`:
    - Check that the key has the right prefix (`sk-` for OpenAI, `sk-or-` for OpenRouter)
 
 3. **"Deep research not available"**
-   - This is expected for OpenRouter - it will use regular chat completion instead
-   - Switch to OpenAI if you need full deep research capabilities
+   - This should no longer occur - OpenRouter now supports deep research via Perplexity Sonar
+   - If you see this message, check that you're using the latest version
 
 ### Getting Help
 
@@ -140,6 +142,6 @@ Your existing setup will continue to work. To add OpenRouter support:
 1. Go to Settings
 2. Switch provider to OpenRouter
 3. Add your OpenRouter API key
-4. Test with a simple topic
+4. Test with a simple topic and enjoy access to Perplexity Sonar deep research
 
 You can switch back to OpenAI anytime without losing your configuration.
