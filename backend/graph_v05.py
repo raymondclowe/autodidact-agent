@@ -303,6 +303,7 @@ def recap_node(state: SessionState) -> SessionState:
         recent_los=recent_los,
         next_obj=next_obj_label,
         refs=state.get("references_sections_resolved", []),
+        learner_profile_context=state.get("learner_profile_context", "")
     )
 
     messages = [{"role": "system", "content": sys_prompt}, *history]

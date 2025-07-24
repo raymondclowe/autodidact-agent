@@ -109,6 +109,10 @@ RECAP CONTEXT
   {NEXT_OBJ}
 ──────────────────────────────────────────────
 
+{LEARNER_PROFILE_CONTEXT}
+
+──────────────────────────────────────────────
+
 REFERENCE RULES  (same as teaching phase)
 1. Prefer facts plausibly found in the references below.
 2. Cite with [RID §loc] when you rely on a reference.
@@ -207,12 +211,14 @@ def format_recap_prompt(
     recent_los: list[str],
     next_obj: str,
     refs: list[dict[str, Any]],
+    learner_profile_context: str = "",
 ) -> str:
     """Fill the RECAP prompt with runtime values."""
     return RECAP_PROMPT_TEMPLATE.format(
         RECENT_LOS="; ".join(recent_los),
         NEXT_OBJ=next_obj,
         REF_LIST_BULLETS=build_ref_list(refs),
+        LEARNER_PROFILE_CONTEXT=learner_profile_context,
     )
 
 # ---------------------------------------------------------------------------

@@ -83,14 +83,31 @@ class LearnerProfileManager:
             # Get session information
             session_info = get_session_info(session_id)
             if not session_info:
-                logger.error(f"Session {session_id} not found")
-                return
+                # Try to get basic session info from session table directly
+                with get_db_connection() as conn:
+                    cursor = conn.execute("""
+                        SELECT s.project_id, p.topic 
+                        FROM session s 
+                        JOIN project p ON s.project_id = p.id 
+                        WHERE s.id = ?
+                    """, (session_id,))
+                    row = cursor.fetchone()
+                    if row:
+                        session_info = {
+                            'project_id': row[0],
+                            'project_topic': row[1]
+                        }
+                    else:
+                        logger.error(f"Session {session_id} not found")
+                        return
             
-            # Get project information
-            project = get_project(session_info['project_id'])
-            if not project:
-                logger.error(f"Project {session_info['project_id']} not found")
-                return
+            # Get project information if not already available
+            if 'project_topic' not in session_info:
+                project = get_project(session_info['project_id'])
+                if not project:
+                    logger.error(f"Project {session_info['project_id']} not found")
+                    return
+                session_info['project_topic'] = project['topic']
             
             # Get session transcript
             transcript = get_transcript_for_session(session_id)
@@ -107,7 +124,7 @@ class LearnerProfileManager:
             # Update topic-specific profile
             self._update_topic_profile_with_ai(
                 session_info['project_id'], 
-                project['topic'], 
+                session_info['project_topic'], 
                 transcript_text
             )
             
