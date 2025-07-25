@@ -19,6 +19,11 @@ LOG_LEVEL = os.getenv("AUTODIDACT_LOG_LEVEL", "INFO").upper()
 LOG_FILE = os.getenv("AUTODIDACT_LOG_FILE", None)
 DEBUG_LOG_FILE = None  # Will be set when debug mode is enabled
 
+# Security constants
+MAX_ENV_VAR_LENGTH = 100  # Maximum length for environment variable values in logs
+INCIDENT_FILE_PERMISSIONS = 0o600  # Read/write for owner only
+DEBUG_LOG_FILE_PERMISSIONS = 0o600  # Read/write for owner only
+
 def configure_logging():
     handlers = [logging.StreamHandler()]
     if LOG_FILE:
@@ -41,19 +46,46 @@ def configure_debug_logging():
     # Ensure config directory exists
     ensure_config_directory()
     
-    # Configure logging with both console and file output, debug level
-    handlers = [
-        logging.StreamHandler(),
-        logging.FileHandler(DEBUG_LOG_FILE, encoding='utf-8')
-    ]
+    # Get or create logger for autodidact namespace
+    autodidact_logger = logging.getLogger('autodidact')
+    autodidact_logger.setLevel(logging.DEBUG)
     
-    # Set up root logger with debug level and detailed formatting
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s %(levelname)s [%(name)s:%(lineno)d] %(message)s",
-        handlers=handlers,
-        force=True  # Override any existing logging configuration
+    # Remove any existing handlers to avoid duplicates
+    for handler in autodidact_logger.handlers[:]:
+        autodidact_logger.removeHandler(handler)
+    
+    # Create formatters
+    detailed_formatter = logging.Formatter(
+        "%(asctime)s %(levelname)s [%(name)s:%(lineno)d] %(message)s"
     )
+    
+    # Configure console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(detailed_formatter)
+    autodidact_logger.addHandler(console_handler)
+    
+    # Configure file handler
+    file_handler = logging.FileHandler(DEBUG_LOG_FILE, encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(detailed_formatter)
+    autodidact_logger.addHandler(file_handler)
+    
+    # Set secure file permissions
+    DEBUG_LOG_FILE.chmod(DEBUG_LOG_FILE_PERMISSIONS)
+    
+    # Prevent propagation to root logger to avoid interference
+    autodidact_logger.propagate = False
+    
+    # Also configure root logger for other modules if needed
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
+        # Only configure root logger if it doesn't have handlers
+        root_handler = logging.StreamHandler()
+        root_handler.setLevel(logging.INFO)
+        root_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        root_logger.addHandler(root_handler)
+        root_logger.setLevel(logging.INFO)
     
     logger = logging.getLogger(__name__)
     logger.info(f"Debug mode enabled - logging to {DEBUG_LOG_FILE}")

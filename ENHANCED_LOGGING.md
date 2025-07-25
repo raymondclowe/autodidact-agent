@@ -111,19 +111,22 @@ FULL JSON DATA:
 #### `app.py` 
 - Added `parse_debug_args()` function to detect debug flags before Streamlit initialization
 - Supports both `--debug` command line argument and `AUTODIDACT_DEBUG` environment variable
-- Removes `--debug` from `sys.argv` to prevent Streamlit conflicts
+- Uses safe in-place modification of `sys.argv` to prevent Streamlit conflicts
+- Initializes debug mode only when appropriate (main module or Streamlit context)
 
 #### `utils/config.py`
-- Added `configure_debug_logging()` function
-- Creates timestamped debug log files in `~/.autodidact/` directory
-- Configures Python logging with DEBUG level and enhanced formatting
-- Supports both console and file output handlers
+- Added `configure_debug_logging()` function with improved logging configuration
+- Creates timestamped debug log files in `~/.autodidact/` directory with secure permissions
+- Uses namespace-specific loggers to avoid conflicts with other libraries
+- Supports both console and file output handlers with enhanced formatting
+- Added security constants for file permissions and data filtering
 
 #### `utils/error_handling.py`
-- Added `create_incident_file()` for comprehensive incident reporting
-- Added `log_major_error()` for automated incident file generation
-- Enhanced `handle_api_error()` to create incident files for major API errors
-- Maintains existing error handling while adding incident reporting
+- Enhanced `create_incident_file()` with comprehensive security filtering
+- Added `_filter_sensitive_env_vars()` for advanced environment variable protection
+- Refactored `extract_error_details()` into smaller, focused functions for better maintainability
+- Improved error parsing with better separation of concerns
+- Added secure file permissions for all generated incident files
 
 ### File Locations
 
@@ -137,9 +140,22 @@ All log files are stored in the user's home directory:
 
 ### Security Considerations
 
-- **API Key Protection**: Environment variables containing API keys are not logged
-- **File Permissions**: Log files use appropriate permissions (readable by user only)
-- **Directory Creation**: Automatically creates `~/.autodidact/` directory with secure permissions
+#### Environment Variable Protection
+- **Comprehensive filtering**: Sensitive environment variables (API keys, secrets, tokens, passwords, etc.) are automatically redacted from incident files
+- **Pattern-based detection**: Uses advanced pattern matching to identify sensitive variables containing keywords like `_KEY`, `_SECRET`, `_TOKEN`, `_PASSWORD`, etc.
+- **Length limiting**: Non-sensitive environment variables are truncated to 100 characters for safety
+- **Allowed prefixes**: Only `AUTODIDACT_`, `OPENAI_`, and `OPENROUTER_` prefixed variables are included in logs
+
+#### File Security
+- **Debug log files**: Set to 600 permissions (read/write for owner only)
+- **Incident files**: Set to 600 permissions (read/write for owner only)  
+- **Configuration directory**: Created with 700 permissions (full access for owner only)
+
+#### Data Minimization
+- **Error context only**: Only error-related information is logged in incident files
+- **No personal data**: User content and personal information are never logged
+- **Filtered output**: Environment variables are carefully filtered to exclude sensitive information
+- **Temporary values**: Debug logs rotate and don't persist indefinitely
 
 ## Usage Examples
 
