@@ -100,6 +100,14 @@ def get_llm():
             if config.get("base_url"):
                 llm_kwargs["base_url"] = config["base_url"]
             
+            # Add OpenRouter app attribution headers if using OpenRouter
+            if provider == "openrouter":
+                from utils.config import APP_NAME, APP_URL
+                llm_kwargs["default_headers"] = {
+                    "HTTP-Referer": APP_URL,
+                    "X-Title": APP_NAME,
+                }
+            
             llm = ChatOpenAI(**llm_kwargs)
             
             # Test the LLM with a simple call to validate the API key
