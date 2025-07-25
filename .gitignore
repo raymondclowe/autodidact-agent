@@ -182,3 +182,4 @@ pyrightconfig.json
 test_session_persistence.py
 test_issue_30_fix.py
 test_multiple_messages_fix.py
+test_learner_profile.py

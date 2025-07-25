@@ -629,8 +629,13 @@ def complete_session(session_id: str, final_score: float):
     try:
         from backend.learner_profile import learner_profile_manager
         learner_profile_manager.update_profiles_from_session(session_id)
+        logger.info(f"Learner profiles updated successfully for session {session_id}")
+    except ImportError as e:
+        logger.error(f"Failed to import learner_profile module for session {session_id}: {e}")
     except Exception as e:
-        logger.warning(f"Failed to update learner profiles for session {session_id}: {e}")
+        logger.error(f"Failed to update learner profiles for session {session_id}: {e}")
+        # Consider whether this should raise an exception or just log
+        # For now, we'll log and continue since the session completion is more critical
 
 
 def create_node(project_id: str, original_id: str, label: str, summary: str) -> str:
