@@ -875,14 +875,31 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                         timeout=PERPLEXITY_DEEP_RESEARCH_TIMEOUT
                     )
                     
-                    logger.info(f"[API CALL] Reason: Perplexity deep research | Model: {research_model} | Provider: {current_provider} | Job ID: {pseudo_job_id}")
-                    response = long_timeout_client.chat.completions.create(
+                    # Calculate safe max_tokens to avoid exceeding model limits
+                    full_prompt = optimized_prompt + "\n\n" + user_message
+                    model_max_tokens = get_model_token_limit(research_model, current_provider)
+                    token_check = check_token_limits(full_prompt, model_max_tokens=model_max_tokens)
+                    safe_max_tokens = token_check['recommended_max_completion']
+                    
+                    logger.info(f"[API CALL] Reason: Perplexity deep research | Model: {research_model} | Provider: {current_provider} | Job ID: {pseudo_job_id} | Max tokens: {safe_max_tokens}")
+                    
+                    # Use get_api_call_params to ensure proper parameter handling
+                    params = get_api_call_params(
                         model=research_model,
                         messages=[
                             {"role": "system", "content": optimized_prompt},
                             {"role": "user", "content": user_message}
                         ],
                         temperature=0.7,
+                        max_tokens=safe_max_tokens,
+                        provider=current_provider
+                    )
+                    
+                    # Remove timeout from params as it needs to be passed separately to the client
+                    params_without_timeout = {k: v for k, v in params.items() if k != 'timeout'}
+                    
+                    response = long_timeout_client.chat.completions.create(
+                        **params_without_timeout,
                         timeout=PERPLEXITY_DEEP_RESEARCH_TIMEOUT
                     )
                     
