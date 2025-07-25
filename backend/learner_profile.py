@@ -29,6 +29,9 @@ PROFILE_CACHE_TTL_SECONDS = 300  # 5 minutes
 GENERIC_PROFILE_ROOT = "generic_learner_profile"
 TOPIC_PROFILE_ROOT = "topic_specific_learner_profile"
 
+# Placeholder values used in profiles
+PLACEHOLDER_VALUES = {"to be determined", "n/a"}
+
 GENERIC_REQUIRED_SECTIONS = ["learning_preferences", "strengths_and_needs", "meta_information"]
 TOPIC_REQUIRED_SECTIONS = ["topic_understanding", "topic_specific_preferences", "meta_information"]
 
@@ -75,16 +78,16 @@ class LearnerProfileManager:
         """Get the topic-specific learner profile XML for a project"""
         self._clear_expired_cache()
         
-        cache_key = f"topic_profile_{project_id}"
+        cache_key = f"topic_profile_{project_id}_{topic}"
         if cache_key in self._profile_cache:
             return self._profile_cache[cache_key]
         
         with get_db_connection() as conn:
             cursor = conn.execute("""
                 SELECT profile_xml FROM topic_learner_profile 
-                WHERE project_id = ? 
+                WHERE project_id = ? AND topic = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (project_id,))
+            """, (project_id, topic))
             row = cursor.fetchone()
             
             if row:
@@ -195,16 +198,9 @@ class LearnerProfileManager:
         
         return "\n".join(formatted_lines)
     
-    def _update_generic_profile_with_ai(self, transcript_text: str):
-        """Use AI to update the generic learner profile based on session transcript"""
+    def _update_profile_with_ai(self, prompt: str, save_callback, profile_type: str):
+        """Common method for updating profiles with AI analysis"""
         try:
-            current_profile = self.get_generic_profile()
-            
-            # Sanitize transcript text to prevent potential injection issues
-            sanitized_transcript = self._sanitize_text_for_ai(transcript_text)
-            
-            prompt = self._build_generic_profile_update_prompt(current_profile, sanitized_transcript)
-
             client = create_client()
             model = get_model_for_task("chat")
             
@@ -218,48 +214,41 @@ class LearnerProfileManager:
             
             if result != NO_CHANGE_RESPONSE:
                 # Validate it's proper XML before saving
-                if self._validate_and_save_profile(result, "generic"):
-                    logger.info("Generic profile updated by AI")
+                if save_callback(result):
+                    logger.info(f"{profile_type.capitalize()} profile updated by AI")
                 else:
-                    logger.error("Failed to save generic profile due to validation errors")
+                    logger.error(f"Failed to save {profile_type} profile due to validation errors")
             else:
-                logger.info("AI determined no changes needed for generic profile")
+                logger.info(f"AI determined no changes needed for {profile_type} profile")
                 
         except Exception as e:
-            logger.error(f"Error updating generic profile with AI: {e}")
+            logger.error(f"Error updating {profile_type} profile with AI: {e}")
+    
+    def _update_generic_profile_with_ai(self, transcript_text: str):
+        """Use AI to update the generic learner profile based on session transcript"""
+        current_profile = self.get_generic_profile()
+        
+        # Sanitize transcript text to prevent potential injection issues
+        sanitized_transcript = self._sanitize_text_for_ai(transcript_text)
+        
+        prompt = self._build_generic_profile_update_prompt(current_profile, sanitized_transcript)
+        
+        save_callback = lambda result: self._validate_and_save_profile(result, "generic")
+        
+        self._update_profile_with_ai(prompt, save_callback, "generic")
     
     def _update_topic_profile_with_ai(self, project_id: str, topic: str, transcript_text: str):
         """Use AI to update the topic-specific learner profile based on session transcript"""
-        try:
-            current_profile = self.get_topic_profile(project_id, topic)
-            
-            # Sanitize transcript text to prevent potential injection issues
-            sanitized_transcript = self._sanitize_text_for_ai(transcript_text)
-            
-            prompt = self._build_topic_profile_update_prompt(current_profile, topic, sanitized_transcript)
-
-            client = create_client()
-            model = get_model_for_task("chat")
-            
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=DEFAULT_AI_TEMPERATURE  # Low temperature for consistent analysis
-            )
-            
-            result = response.choices[0].message.content.strip()
-            
-            if result != NO_CHANGE_RESPONSE:
-                # Validate it's proper XML before saving
-                if self._validate_and_save_profile(result, "topic", project_id, topic):
-                    logger.info(f"Topic profile updated by AI for project {project_id}")
-                else:
-                    logger.error(f"Failed to save topic profile for project {project_id} due to validation errors")
-            else:
-                logger.info(f"AI determined no changes needed for topic profile (project {project_id})")
-                
-        except Exception as e:
-            logger.error(f"Error updating topic profile with AI: {e}")
+        current_profile = self.get_topic_profile(project_id, topic)
+        
+        # Sanitize transcript text to prevent potential injection issues
+        sanitized_transcript = self._sanitize_text_for_ai(transcript_text)
+        
+        prompt = self._build_topic_profile_update_prompt(current_profile, topic, sanitized_transcript)
+        
+        save_callback = lambda result: self._validate_and_save_profile(result, "topic", project_id, topic)
+        
+        self._update_profile_with_ai(prompt, save_callback, f"topic (project {project_id})")
     
     def get_profile_context_for_session(self, project_id: str, topic: str) -> str:
         """Get formatted profile information to include in session prompts"""
@@ -292,7 +281,7 @@ Please use this learner profile information to personalize the learning session.
             
             # Walk through all elements and collect non-placeholder values
             for elem in root.iter():
-                if elem.text and elem.text.strip() and elem.text.strip() != "to be determined" and elem.text.strip() != "n/a":
+                if elem.text and elem.text.strip() and elem.text.strip() not in PLACEHOLDER_VALUES:
                     key_info.append(f"- {elem.tag}: {elem.text.strip()}")
             
             if key_info:

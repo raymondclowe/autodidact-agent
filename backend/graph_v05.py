@@ -11,6 +11,7 @@ Testing, grading, and wrap are still stubbed.
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, Dict, List
 from datetime import datetime
 from langgraph.graph import StateGraph, END, START
@@ -55,6 +56,8 @@ from backend.tutor_prompts import (
     clean_improper_citations,
     remove_control_blocks,
 )
+
+logger = logging.getLogger(__name__)
 
 # ────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -209,7 +212,7 @@ def load_context_node(state: SessionState) -> SessionState:
                 node_data.get('project_topic', '')
             )
         except Exception as e:
-            print(f"[load_context] Warning: Could not load learner profile context: {e}")
+            logger.warning(f"Could not load learner profile context: {e}")
             learner_profile_context = "LEARNER PROFILE CONTEXT: Profile information not available."
         
         # Create new state with all loaded data

@@ -22,6 +22,30 @@ logger = logging.getLogger(__name__)
 MASTERY_THRESHOLD = 0.7
 DB_PATH = Path.home() / '.autodidact' / 'autodidact.db'
 
+# Schema definitions for learner profile tables
+GENERIC_LEARNER_PROFILE_SCHEMA = """
+    CREATE TABLE generic_learner_profile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        profile_xml TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+"""
+
+TOPIC_LEARNER_PROFILE_SCHEMA = """
+    CREATE TABLE topic_learner_profile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        profile_xml TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES project(id)
+    )
+"""
+
+GENERIC_PROFILE_INDEX = "CREATE INDEX idx_generic_profile_updated ON generic_learner_profile(updated_at)"
+TOPIC_PROFILE_PROJECT_TOPIC_INDEX = "CREATE INDEX idx_topic_profile_project_topic ON topic_learner_profile(project_id, topic)"
+TOPIC_PROFILE_UPDATED_INDEX = "CREATE INDEX idx_topic_profile_updated ON topic_learner_profile(updated_at)"
+
 
 class CustomJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder that can handle Pydantic BaseModel objects"""
@@ -189,7 +213,7 @@ def init_database():
     CREATE INDEX IF NOT EXISTS idx_session_node ON session(node_id);
     CREATE INDEX IF NOT EXISTS idx_transcript_session ON transcript(session_id);
     CREATE INDEX IF NOT EXISTS idx_generic_profile_updated ON generic_learner_profile(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_topic_profile_project ON topic_learner_profile(project_id);
+    CREATE INDEX IF NOT EXISTS idx_topic_profile_project_topic ON topic_learner_profile(project_id, topic);
     CREATE INDEX IF NOT EXISTS idx_topic_profile_updated ON topic_learner_profile(updated_at);
     """
     
@@ -615,6 +639,8 @@ def create_session(project_id: str, node_id: str) -> str:
 
 def complete_session(session_id: str, final_score: float):
     """Mark a session as completed with final score and update learner profiles"""
+    from backend.learner_profile import learner_profile_manager
+    
     with get_db_connection() as conn:
         conn.execute("""
             UPDATE session 
@@ -627,7 +653,6 @@ def complete_session(session_id: str, final_score: float):
     
     # Update learner profiles based on this session
     try:
-        from backend.learner_profile import learner_profile_manager
         learner_profile_manager.update_profiles_from_session(session_id)
         logger.info(f"Learner profiles updated successfully for session {session_id}")
     except ImportError as e:
@@ -1299,30 +1324,15 @@ def _ensure_learner_profile_tables():
             
             # Add generic_learner_profile table if it doesn't exist
             if 'generic_learner_profile' not in existing_tables:
-                conn.execute("""
-                    CREATE TABLE generic_learner_profile (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        profile_xml TEXT NOT NULL,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                conn.execute("CREATE INDEX idx_generic_profile_updated ON generic_learner_profile(updated_at)")
+                conn.execute(GENERIC_LEARNER_PROFILE_SCHEMA)
+                conn.execute(GENERIC_PROFILE_INDEX)
                 logger.info("Added generic_learner_profile table")
             
             # Add topic_learner_profile table if it doesn't exist
             if 'topic_learner_profile' not in existing_tables:
-                conn.execute("""
-                    CREATE TABLE topic_learner_profile (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        project_id TEXT NOT NULL,
-                        topic TEXT NOT NULL,
-                        profile_xml TEXT NOT NULL,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (project_id) REFERENCES project(id)
-                    )
-                """)
-                conn.execute("CREATE INDEX idx_topic_profile_project ON topic_learner_profile(project_id)")
-                conn.execute("CREATE INDEX idx_topic_profile_updated ON topic_learner_profile(updated_at)")
+                conn.execute(TOPIC_LEARNER_PROFILE_SCHEMA)
+                conn.execute(TOPIC_PROFILE_PROJECT_TOPIC_INDEX)
+                conn.execute(TOPIC_PROFILE_UPDATED_INDEX)
                 logger.info("Added topic_learner_profile table")
                 
             conn.commit()
