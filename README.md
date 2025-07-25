@@ -67,6 +67,11 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+**Alternative**: Use the wrapper script for additional features like debug mode:
+```bash
+python run.py
+```
+
 ## Setup
 
 On first run, you'll need to choose an AI provider and provide your API key. The app supports:
@@ -289,6 +294,27 @@ You can configure multiple providers and switch between them anytime in Settings
 2. **Review the Plan**: Examine the generated knowledge graph and report
 3. **Begin Learning**: Start tutoring sessions for available topics
 4. **Track Progress**: Monitor your mastery levels across concepts
+
+### Debug Mode
+
+Autodidact supports debug mode for troubleshooting and development. There are two ways to enable it:
+
+#### Method 1: Using the wrapper script (Recommended)
+```bash
+python run.py --debug
+```
+
+#### Method 2: Using environment variable
+```bash
+AUTODIDACT_DEBUG=true streamlit run app.py
+```
+
+When debug mode is enabled, you'll see:
+- 🐛 A red debug banner at the top of the app
+- Enhanced logging to `~/.autodidact/debug-YYYYMMDD-HHMMSS.log`
+- Detailed error information and system state
+
+**Note**: The original `streamlit run app.py --debug` command won't work because Streamlit doesn't recognize the `--debug` flag. Use one of the methods above instead.
 
 ## Project Structure
 
