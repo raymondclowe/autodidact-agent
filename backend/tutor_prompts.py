@@ -43,6 +43,10 @@ SESSION CONTEXT
 • Remaining objectives (do NOT cover yet) :  {REMAINING_OBJS}
 ──────────────────────────────────────────────
 
+{LEARNER_PROFILE_CONTEXT}
+
+──────────────────────────────────────────────
+
 REFERENCE RULES  (ground your teaching here)
 1. Prefer facts that plausibly appear in the works listed below.
 2. When you rely on a reference, cite it as **[RID §loc]** — e.g.
@@ -103,6 +107,10 @@ RECAP CONTEXT
 
 • Next new objective to teach (do NOT cover yet):
   {NEXT_OBJ}
+──────────────────────────────────────────────
+
+{LEARNER_PROFILE_CONTEXT}
+
 ──────────────────────────────────────────────
 
 REFERENCE RULES  (same as teaching phase)
@@ -187,6 +195,7 @@ def format_teaching_prompt(
     recent: list[str],
     remaining: list[str],
     refs: list[dict[str, Any]],
+    learner_profile_context: str = "",
 ) -> str:
     """Fill the TEACHING prompt with runtime values."""
     return TEACHING_PROMPT_TEMPLATE.format(
@@ -195,18 +204,21 @@ def format_teaching_prompt(
         RECENT_TOPICS="; ".join(recent),
         REMAINING_OBJS="; ".join(remaining),
         REF_LIST_BULLETS=build_ref_list(refs),
+        LEARNER_PROFILE_CONTEXT=learner_profile_context,
     )
 
 def format_recap_prompt(
     recent_los: list[str],
     next_obj: str,
     refs: list[dict[str, Any]],
+    learner_profile_context: str = "",
 ) -> str:
     """Fill the RECAP prompt with runtime values."""
     return RECAP_PROMPT_TEMPLATE.format(
         RECENT_LOS="; ".join(recent_los),
         NEXT_OBJ=next_obj,
         REF_LIST_BULLETS=build_ref_list(refs),
+        LEARNER_PROFILE_CONTEXT=learner_profile_context,
     )
 
 # ---------------------------------------------------------------------------

@@ -22,6 +22,30 @@ logger = logging.getLogger(__name__)
 MASTERY_THRESHOLD = 0.7
 DB_PATH = Path.home() / '.autodidact' / 'autodidact.db'
 
+# Schema definitions for learner profile tables
+GENERIC_LEARNER_PROFILE_SCHEMA = """
+    CREATE TABLE generic_learner_profile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        profile_xml TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+"""
+
+TOPIC_LEARNER_PROFILE_SCHEMA = """
+    CREATE TABLE topic_learner_profile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        profile_xml TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES project(id)
+    )
+"""
+
+GENERIC_PROFILE_INDEX = "CREATE INDEX idx_generic_profile_updated ON generic_learner_profile(updated_at)"
+TOPIC_PROFILE_PROJECT_TOPIC_INDEX = "CREATE INDEX idx_topic_profile_project_topic ON topic_learner_profile(project_id, topic)"
+TOPIC_PROFILE_UPDATED_INDEX = "CREATE INDEX idx_topic_profile_updated ON topic_learner_profile(updated_at)"
+
 
 class CustomJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder that can handle Pydantic BaseModel objects"""
@@ -163,6 +187,21 @@ def init_database():
         PRIMARY KEY (session_id, turn_idx),
         FOREIGN KEY (session_id) REFERENCES session(id)
     );
+
+    CREATE TABLE IF NOT EXISTS generic_learner_profile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        profile_xml TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS topic_learner_profile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        profile_xml TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES project(id)
+    );
     
     -- Create indexes for common queries
     CREATE INDEX IF NOT EXISTS idx_node_project ON node(project_id);
@@ -173,6 +212,9 @@ def init_database():
     CREATE INDEX IF NOT EXISTS idx_session_project ON session(project_id);
     CREATE INDEX IF NOT EXISTS idx_session_node ON session(node_id);
     CREATE INDEX IF NOT EXISTS idx_transcript_session ON transcript(session_id);
+    CREATE INDEX IF NOT EXISTS idx_generic_profile_updated ON generic_learner_profile(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_topic_profile_project_topic ON topic_learner_profile(project_id, topic);
+    CREATE INDEX IF NOT EXISTS idx_topic_profile_updated ON topic_learner_profile(updated_at);
     """
     
     with get_db_connection() as conn:
@@ -181,6 +223,7 @@ def init_database():
     
     # Run necessary migrations for existing databases
     _ensure_session_state_column()
+    _ensure_learner_profile_tables()
 
 
 def create_project(topic: str, report_path: str, resources: Dict) -> str:
@@ -595,7 +638,9 @@ def create_session(project_id: str, node_id: str) -> str:
 
 
 def complete_session(session_id: str, final_score: float):
-    """Mark a session as completed with final score"""
+    """Mark a session as completed with final score and update learner profiles"""
+    from backend.learner_profile import learner_profile_manager
+    
     with get_db_connection() as conn:
         conn.execute("""
             UPDATE session 
@@ -605,6 +650,17 @@ def complete_session(session_id: str, final_score: float):
             WHERE id = ?
         """, (final_score, session_id))
         conn.commit()
+    
+    # Update learner profiles based on this session
+    try:
+        learner_profile_manager.update_profiles_from_session(session_id)
+        logger.info(f"Learner profiles updated successfully for session {session_id}")
+    except ImportError as e:
+        logger.error(f"Failed to import learner_profile module for session {session_id}: {e}")
+    except Exception as e:
+        logger.error(f"Failed to update learner profiles for session {session_id}: {e}")
+        # Consider whether this should raise an exception or just log
+        # For now, we'll log and continue since the session completion is more critical
 
 
 def create_node(project_id: str, original_id: str, label: str, summary: str) -> str:
@@ -1256,6 +1312,32 @@ def _ensure_session_state_column():
                 logger.debug("session_state_json column already exists")
     except Exception as e:
         logger.warning(f"Failed to ensure session_state_json column: {e}")
+
+
+def _ensure_learner_profile_tables():
+    """Ensure learner profile tables exist for existing databases"""
+    try:
+        with get_db_connection() as conn:
+            # Check if tables already exist
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('generic_learner_profile', 'topic_learner_profile')")
+            existing_tables = [row[0] for row in cursor.fetchall()]
+            
+            # Add generic_learner_profile table if it doesn't exist
+            if 'generic_learner_profile' not in existing_tables:
+                conn.execute(GENERIC_LEARNER_PROFILE_SCHEMA)
+                conn.execute(GENERIC_PROFILE_INDEX)
+                logger.info("Added generic_learner_profile table")
+            
+            # Add topic_learner_profile table if it doesn't exist
+            if 'topic_learner_profile' not in existing_tables:
+                conn.execute(TOPIC_LEARNER_PROFILE_SCHEMA)
+                conn.execute(TOPIC_PROFILE_PROJECT_TOPIC_INDEX)
+                conn.execute(TOPIC_PROFILE_UPDATED_INDEX)
+                logger.info("Added topic_learner_profile table")
+                
+            conn.commit()
+    except Exception as e:
+        logger.warning(f"Failed to ensure learner profile tables: {e}")
 
 
 # Initialize database on module import

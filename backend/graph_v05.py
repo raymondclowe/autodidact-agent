@@ -11,6 +11,7 @@ Testing, grading, and wrap are still stubbed.
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, Dict, List
 from datetime import datetime
 from langgraph.graph import StateGraph, END, START
@@ -55,6 +56,8 @@ from backend.tutor_prompts import (
     clean_improper_citations,
     remove_control_blocks,
 )
+
+logger = logging.getLogger(__name__)
 
 # ────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -200,6 +203,18 @@ def load_context_node(state: SessionState) -> SessionState:
         if project:
             resources = project.get('resources', [])
         
+        # 6. Load learner profile context
+        learner_profile_context = ""
+        try:
+            from backend.learner_profile import learner_profile_manager
+            learner_profile_context = learner_profile_manager.get_profile_context_for_session(
+                state['project_id'], 
+                node_data.get('project_topic', '')
+            )
+        except Exception as e:
+            logger.warning(f"Could not load learner profile context: {e}")
+            learner_profile_context = "LEARNER PROFILE CONTEXT: Profile information not available."
+        
         # Create new state with all loaded data
         new_state = {
             **state,
@@ -212,6 +227,7 @@ def load_context_node(state: SessionState) -> SessionState:
             'objectives_already_known': objectives_already_known,
             'prerequisite_objectives': prerequisite_objectives,
             'resources': resources,
+            'learner_profile_context': learner_profile_context,
             'current_phase': 'intro',
             'navigate_without_user_interaction': True
         }
@@ -290,6 +306,7 @@ def recap_node(state: SessionState) -> SessionState:
         recent_los=recent_los,
         next_obj=next_obj_label,
         refs=state.get("references_sections_resolved", []),
+        learner_profile_context=state.get("learner_profile_context", "")
     )
 
     messages = [{"role": "system", "content": sys_prompt}, *history]
@@ -395,6 +412,7 @@ def teaching_node(state: SessionState) -> SessionState:
         recent=[o.description for o in state.get("objectives_already_known", [])],
         remaining=[o.description for o in objectives[idx + 1 :]],
         refs=state.get("references_sections_resolved", []),
+        learner_profile_context=state.get("learner_profile_context", "")
     )
 
     messages = [{"role": "system", "content": sys_prompt}, *history]
