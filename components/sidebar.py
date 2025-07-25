@@ -78,6 +78,11 @@ def show_sidebar():
         else:
             st.info("No projects yet. Click 'New Project' to start!")
         
+        # Speech Controls
+        st.markdown("---")
+        from components.speech_controls import show_speech_controls
+        show_speech_controls(location="sidebar")
+        
         # Footer
         st.markdown("---")
         

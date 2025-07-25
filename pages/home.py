@@ -4,6 +4,16 @@ Marketing and introduction page
 """
 
 import streamlit as st
+from components.speech_controls import create_global_speech_component
+from utils.speech_utils import initialize_speech_state
+
+# Show sidebar navigation
+from components.sidebar import show_sidebar
+show_sidebar()
+
+# Initialize speech functionality
+initialize_speech_state()
+create_global_speech_component()
 
 # Page header
 st.markdown("""

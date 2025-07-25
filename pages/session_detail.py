@@ -14,11 +14,28 @@ from backend.graph_v05 import (
   session_graph
 )
 from backend.debug_commands import handle_debug_command
+from components.speech_controls import show_speech_controls, create_global_speech_component, create_speech_enabled_markdown
+from utils.speech_utils import initialize_speech_state
 
 from pathlib import Path
 import pickle
 from datetime import datetime
 from typing import Any, Dict
+
+# Show sidebar navigation
+from components.sidebar import show_sidebar
+show_sidebar()
+
+# Initialize speech functionality
+initialize_speech_state()
+create_global_speech_component()
+
+# Show speech controls in header
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown("# 🎓 Learning Session")
+with col2:
+    show_speech_controls(location="header")
 
 def run_tutor_response(session_info, node_info):
     """Run the v0.4 tutor graph to generate response - pure state transformation, no UI"""
@@ -162,7 +179,12 @@ def session_info_dialog():
     st.info(f"**Topic:** {node_info['label']}")
     st.markdown("### 📋 Learning Objectives")
     for i, obj in enumerate(node_info['learning_objectives'], 1):
-        st.markdown(f"{i}. {obj['description']}")
+        col1, col2 = st.columns([10, 1])
+        with col1:
+            st.markdown(f"{i}. {obj['description']}")
+        with col2:
+            from components.speech_controls import add_speaker_button_to_text
+            add_speaker_button_to_text(obj['description'])
     st.markdown("### 📚 References")
     for i, ref in enumerate(node_info['references_sections_resolved'], 1):
         nat_lang_section_text = ref.get("section") or ref.get("loc") or ""
@@ -260,7 +282,12 @@ if "history" not in st.session_state:
 # Display chat messages from history on app rerun
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        if message["role"] == "assistant":
+            # Use speech-enabled markdown for assistant messages
+            create_speech_enabled_markdown(message["content"], add_button=True)
+        else:
+            # Regular markdown for user messages
+            st.markdown(message["content"])
 
     # Handle initial message generation
 if not is_completed and len(st.session_state.history) == 0:
@@ -278,7 +305,7 @@ if not is_completed and len(st.session_state.history) == 0:
                 for msg in new_messages:
                     if msg["role"] == "assistant":
                         print(f"msg to be shown: {msg['content']}")
-                        st.markdown(msg["content"])
+                        create_speech_enabled_markdown(msg["content"], add_button=True)
             else:
                 st.error(f"❌ Failed to start session: {result['error']} {result}")
 
@@ -312,7 +339,7 @@ if not is_completed:
                     
                     # Display help message
                     with st.chat_message("assistant"):
-                        st.markdown(debug_result['message'])
+                        create_speech_enabled_markdown(debug_result['message'], add_button=True)
                 elif debug_result.get('is_debug_mode_toggle'):
                     # Add debug mode toggle message to chat history
                     st.session_state.history.append({
@@ -322,7 +349,7 @@ if not is_completed:
                     
                     # Display debug mode toggle message
                     with st.chat_message("assistant"):
-                        st.markdown(debug_result['message'])
+                        create_speech_enabled_markdown(debug_result['message'], add_button=True)
                 else:
                     # Add system message about debug completion
                     st.session_state.history.append({
@@ -332,7 +359,7 @@ if not is_completed:
                     
                     # Display debug completion message
                     with st.chat_message("assistant"):
-                        st.markdown(debug_result['message'])
+                        create_speech_enabled_markdown(debug_result['message'], add_button=True)
                         st.balloons()
                         st.success(f"🎉 **Debug Session Complete!** Score: {int(debug_result['score'] * 100)}%")
                         
@@ -373,7 +400,7 @@ if not is_completed:
                         for msg in new_messages:
                             if msg["role"] == "assistant":
                                 print(f"msg to be shown: {msg['content']}")
-                                st.markdown(msg["content"])
+                                create_speech_enabled_markdown(msg["content"], add_button=True)
                         print(f"result: {result}")
                         print(f"st.session_state.history: {st.session_state.history}")
                         # Check if session is completed
