@@ -17,6 +17,7 @@ def parse_debug_args():
     debug_mode = False
     
     # Check for --debug in command line args without modifying sys.argv
+    # Handle both direct python execution and streamlit run patterns
     if '--debug' in sys.argv:
         debug_mode = True
         # Create a copy of sys.argv without --debug for Streamlit
@@ -53,6 +54,9 @@ if "api_key" not in st.session_state:
     current_provider = get_current_provider()
     st.session_state.api_key = load_api_key(current_provider)
 
+# Store debug mode in session state
+st.session_state.debug_mode = DEBUG_MODE
+
 # Define pages
 home = st.Page("pages/home.py", title="Home", url_path="", default=True)
 new_project = st.Page("pages/new_project.py", title="New Project", url_path="new")
@@ -65,17 +69,50 @@ settings = st.Page("pages/settings.py", title="Settings", url_path="settings")
 pg = st.navigation([home, new_project, project, session, settings])
 
 # Always hide Project and Session page from sidebar
-st.markdown("""
+# Add debug mode styling if debug is enabled
+debug_css = ""
+if DEBUG_MODE:
+    debug_css = """
+/* Debug mode indicator */
+.debug-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #ff4b4b;
+    color: white;
+    text-align: center;
+    padding: 5px;
+    font-weight: bold;
+    z-index: 9999;
+    font-size: 12px;
+}
+/* Adjust main content to account for debug banner */
+.main .block-container {
+    padding-top: 40px !important;
+}
+"""
+
+st.markdown(f"""
 <style>
 /* Hide header and auto generated nav from sidebar (this does mean you cannot close the sidebar) */
-[data-testid="stSidebarHeader"] {
+[data-testid="stSidebarHeader"] {{
     display: none !important;
-}
-[data-testid="stSidebarNav"] {
+}}
+[data-testid="stSidebarNav"] {{
     display: none !important;
-}
+}}
+{debug_css}
 </style>
 """, unsafe_allow_html=True)
+
+# Show debug banner if debug mode is enabled
+if DEBUG_MODE:
+    st.markdown("""
+    <div class="debug-banner">
+        🐛 DEBUG MODE ACTIVE - Enhanced logging enabled
+    </div>
+    """, unsafe_allow_html=True)
 
 # Show sidebar on all pages
 show_sidebar()

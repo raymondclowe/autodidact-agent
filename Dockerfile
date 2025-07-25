@@ -43,5 +43,9 @@ USER app
 # Set home directory for the app user so .autodidact folder is created correctly
 ENV HOME=/app/data
 
+# Add build argument for debug mode
+ARG DEBUG_MODE=false
+ENV AUTODIDACT_DEBUG=${DEBUG_MODE}
+
 # Run the application using ENTRYPOINT as recommended by Streamlit
 ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

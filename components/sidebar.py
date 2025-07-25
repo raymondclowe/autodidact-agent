@@ -80,6 +80,19 @@ def show_sidebar():
         
         # Footer
         st.markdown("---")
+        
+        # Debug information if debug mode is enabled
+        if hasattr(st.session_state, 'debug_mode') and st.session_state.debug_mode:
+            st.markdown("### 🐛 Debug Info")
+            st.markdown(f"**Debug Mode:** Active")
+            
+            # Show debug log file path if available
+            from utils.config import DEBUG_LOG_FILE
+            if DEBUG_LOG_FILE:
+                st.markdown(f"**Log File:** `{DEBUG_LOG_FILE.name}`")
+            
+            st.markdown("---")
+        
         st.markdown(
             "<div style='text-align: center; color: gray; font-size: 0.8em;'>"
             "Built with ❤️ for autodidacts everywhere"
