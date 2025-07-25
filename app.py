@@ -3,10 +3,38 @@ Autodidact - AI-Powered Learning Assistant
 Main entry point with Streamlit navigation
 """
 
+import sys
+import argparse
+import os
 import streamlit as st
 from components.sidebar import show_sidebar
 from components.api_key_overlay import check_and_show_api_overlay
-from utils.config import load_api_key, get_current_provider
+from utils.config import load_api_key, get_current_provider, configure_debug_logging
+
+# Parse command-line arguments before Streamlit initialization
+def parse_debug_args():
+    """Parse command-line arguments, specifically looking for --debug flag"""
+    debug_mode = False
+    
+    # Check for --debug in command line args without modifying sys.argv
+    if '--debug' in sys.argv:
+        debug_mode = True
+        # Create a copy of sys.argv without --debug for Streamlit
+        filtered_argv = [arg for arg in sys.argv if arg != '--debug']
+        sys.argv[:] = filtered_argv  # Update sys.argv in place
+    
+    # Also check for AUTODIDACT_DEBUG environment variable
+    if os.getenv("AUTODIDACT_DEBUG", "").lower() in ["true", "1", "yes"]:
+        debug_mode = True
+    
+    return debug_mode
+
+# Initialize debug mode early (only if we're the main module)
+DEBUG_MODE = False
+if __name__ == "__main__" or "streamlit" in sys.modules:
+    DEBUG_MODE = parse_debug_args()
+    if DEBUG_MODE:
+        configure_debug_logging()
 
 # Page configuration
 st.set_page_config(

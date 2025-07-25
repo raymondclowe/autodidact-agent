@@ -6,9 +6,160 @@ Provides enhanced error parsing and user-friendly error messages
 import json
 import re
 import logging
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+def _filter_sensitive_env_vars(env_vars: Dict[str, str]) -> Dict[str, str]:
+    """
+    Filter out sensitive environment variables from logging.
+    
+    Args:
+        env_vars: Dictionary of environment variables
+        
+    Returns:
+        Filtered dictionary with sensitive values removed
+    """
+    from utils.config import MAX_ENV_VAR_LENGTH
+    
+    # Define patterns for sensitive environment variables
+    sensitive_patterns = [
+        '_KEY', '_SECRET', '_TOKEN', '_PASSWORD', '_PASS',
+        '_CREDENTIAL', '_AUTH', '_PRIVATE', '_CERT', '_SIGNATURE'
+    ]
+    
+    # Define allowed prefixes for debugging
+    allowed_prefixes = ('AUTODIDACT_', 'OPENAI_', 'OPENROUTER_')
+    
+    filtered = {}
+    for key, value in env_vars.items():
+        # Only include variables with allowed prefixes
+        if key.startswith(allowed_prefixes):
+            # Check if the key contains sensitive patterns
+            is_sensitive = any(pattern in key.upper() for pattern in sensitive_patterns)
+            if is_sensitive:
+                filtered[key] = "[REDACTED]"
+            else:
+                # Still limit the value length for safety
+                filtered[key] = value[:MAX_ENV_VAR_LENGTH] if len(value) > MAX_ENV_VAR_LENGTH else value
+    
+    return filtered
+
+
+def create_incident_file(error_details: Dict, context: str, additional_info: Dict = None) -> str:
+    """
+    Create an incident file for major errors with unique identifier.
+    
+    Args:
+        error_details: Dict with extracted error information
+        context: Context where the error occurred
+        additional_info: Additional debugging information
+        
+    Returns:
+        Path to the created incident file
+    """
+    from utils.config import CONFIG_DIR, ensure_config_directory, INCIDENT_FILE_PERMISSIONS
+    
+    ensure_config_directory()
+    
+    # Create incident file with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    incident_file = CONFIG_DIR / f"incident-{timestamp}.log"
+    
+    # Collect comprehensive incident information
+    incident_data = {
+        "timestamp": datetime.now().isoformat(),
+        "context": context,
+        "error_details": error_details,
+        "additional_info": additional_info or {},
+        "system_info": {
+            "python_version": f"{os.sys.version}",
+            "platform": f"{os.name}",
+            "working_directory": str(Path.cwd()),
+            "environment_vars": _filter_sensitive_env_vars(dict(os.environ))
+        }
+    }
+    
+    # Write incident file with both JSON and human-readable format
+    try:
+        with open(incident_file, 'w', encoding='utf-8') as f:
+            f.write("="*80 + "\n")
+            f.write(f"AUTODIDACT INCIDENT REPORT - {timestamp}\n")
+            f.write("="*80 + "\n\n")
+            
+            f.write(f"INCIDENT TIME: {incident_data['timestamp']}\n")
+            f.write(f"CONTEXT: {context}\n\n")
+            
+            f.write("ERROR DETAILS:\n")
+            f.write("-" * 40 + "\n")
+            for key, value in error_details.items():
+                f.write(f"{key.upper()}: {value}\n")
+            f.write("\n")
+            
+            if additional_info:
+                f.write("ADDITIONAL INFORMATION:\n")
+                f.write("-" * 40 + "\n")
+                for key, value in additional_info.items():
+                    f.write(f"{key.upper()}: {value}\n")
+                f.write("\n")
+            
+            f.write("SYSTEM INFORMATION:\n")
+            f.write("-" * 40 + "\n")
+            for key, value in incident_data['system_info'].items():
+                if isinstance(value, dict):
+                    f.write(f"{key.upper()}:\n")
+                    for subkey, subvalue in value.items():
+                        f.write(f"  {subkey}: {subvalue}\n")
+                else:
+                    f.write(f"{key.upper()}: {value}\n")
+            f.write("\n")
+            
+            f.write("FULL JSON DATA:\n")
+            f.write("-" * 40 + "\n")
+            f.write(json.dumps(incident_data, indent=2, default=str))
+        
+        # Set secure file permissions (readable only by owner)
+        incident_file.chmod(INCIDENT_FILE_PERMISSIONS)
+        
+        logger.error(f"Incident file created: {incident_file}")
+        return str(incident_file)
+        
+    except Exception as e:
+        logger.error(f"Failed to create incident file: {e}")
+        return None
+
+
+def log_major_error(error_obj, context: str, additional_info: Dict = None) -> Tuple[str, bool, str]:
+    """
+    Log a major error and create an incident file.
+    
+    Args:
+        error_obj: Error object or exception
+        context: Context where the error occurred
+        additional_info: Additional debugging information
+        
+    Returns:
+        Tuple of (error_message, is_retryable, incident_file_path)
+    """
+    # Extract detailed error information
+    error_details = extract_error_details(error_obj)
+    
+    # Create incident file for major errors
+    incident_file = create_incident_file(error_details, context, additional_info)
+    
+    # Create enhanced error message
+    error_message, is_retryable = create_enhanced_error_message(error_details, context)
+    
+    # Log to main logger
+    logger.error(f"Major error in {context}: {error_details.get('message', 'Unknown error')}")
+    if incident_file:
+        logger.error(f"Incident report saved to: {incident_file}")
+    
+    return error_message, is_retryable, incident_file
 
 
 def parse_openrouter_error(response) -> Optional[Dict]:
@@ -35,22 +186,13 @@ def parse_openrouter_error(response) -> Optional[Dict]:
     """
     try:
         # Handle both response objects and dicts
-        if hasattr(response, '__dict__'):
-            error_data = getattr(response, 'error', None)
-        elif isinstance(response, dict):
-            error_data = response.get('error')
-        else:
-            return None
-        
+        error_data = _get_error_data(response)
         if not error_data:
             return None
         
         # Extract OpenRouter error structure
-        if hasattr(error_data, '__dict__'):
-            error_dict = error_data.__dict__
-        elif isinstance(error_data, dict):
-            error_dict = error_data
-        else:
+        error_dict = _convert_to_dict(error_data)
+        if not error_dict:
             return None
         
         # Look for metadata with raw provider error
@@ -65,30 +207,55 @@ def parse_openrouter_error(response) -> Optional[Dict]:
             return None
         
         # Parse the raw error JSON
-        try:
-            raw_error_data = json.loads(raw_error)
-            provider_error = raw_error_data.get('error', {})
-            
-            return {
-                'provider_name': provider_name,
-                'error_type': provider_error.get('type', 'unknown'),
-                'error_message': provider_error.get('message', ''),
-                'error_code': provider_error.get('code', ''),
-                'raw_error': raw_error
-            }
-        except json.JSONDecodeError:
-            logger.warning(f"Failed to parse raw error JSON: {raw_error}")
-            return {
-                'provider_name': provider_name,
-                'error_type': 'parse_error',
-                'error_message': raw_error,
-                'error_code': error_dict.get('code', ''),
-                'raw_error': raw_error
-            }
+        return _parse_raw_error(raw_error, provider_name, error_dict)
             
     except Exception as e:
         logger.warning(f"Error parsing OpenRouter response: {e}")
         return None
+
+
+def _get_error_data(response):
+    """Extract error data from response object or dict."""
+    if hasattr(response, '__dict__'):
+        return getattr(response, 'error', None)
+    elif isinstance(response, dict):
+        return response.get('error')
+    else:
+        return None
+
+
+def _convert_to_dict(error_data):
+    """Convert error data to dictionary format."""
+    if hasattr(error_data, '__dict__'):
+        return error_data.__dict__
+    elif isinstance(error_data, dict):
+        return error_data
+    else:
+        return None
+
+
+def _parse_raw_error(raw_error: str, provider_name: str, error_dict: Dict) -> Dict:
+    """Parse raw error JSON from OpenRouter response."""
+    try:
+        raw_error_data = json.loads(raw_error)
+        provider_error = raw_error_data.get('error', {})
+        
+        return {
+            'provider_name': provider_name,
+            'error_type': provider_error.get('type', 'unknown'),
+            'error_message': provider_error.get('message', ''),
+            'error_code': provider_error.get('code', ''),
+            'raw_error': raw_error
+        }
+    except json.JSONDecodeError:
+        logger.warning(f"Failed to parse raw error JSON: {raw_error}")
+        return {
+            'provider_name': provider_name,
+            'error_type': 'parse_error',
+            'error_message': raw_error,
+            'error_code': error_dict.get('code', ''),
+            'raw_error': raw_error
+        }
 
 
 def extract_token_info(error_message: str) -> Optional[Dict]:
@@ -204,6 +371,93 @@ def create_user_friendly_error_message(error_info: Dict) -> str:
         return f"❌ **{provider_name} Error**\n\n{error_message}\n\n**Error Type:** {error_type}\n\n**Suggestion:** If this error persists, try switching to a different provider or contact support."
 
 
+def _extract_basic_error_info(error_obj) -> Dict:
+    """Extract basic error information from an error object."""
+    info = {}
+    
+    # Try to get error message from various sources
+    if hasattr(error_obj, 'message') and error_obj.message:
+        info['message'] = str(error_obj.message)
+    elif hasattr(error_obj, '__str__'):
+        error_str = str(error_obj)
+        if error_str and error_str != repr(error_obj):
+            info['message'] = error_str
+    
+    # Extract status/error codes
+    if hasattr(error_obj, 'status_code'):
+        info['status_code'] = error_obj.status_code
+    elif hasattr(error_obj, 'code'):
+        info['code'] = error_obj.code
+        
+    # Extract error type
+    if hasattr(error_obj, 'type'):
+        info['type'] = error_obj.type
+    elif hasattr(error_obj, '__class__'):
+        info['type'] = error_obj.__class__.__name__
+        
+    # Extract request ID for debugging
+    if hasattr(error_obj, 'request_id'):
+        info['request_id'] = error_obj.request_id
+        
+    return info
+
+
+def _extract_response_body_info(error_obj) -> Dict:
+    """Extract information from error response body."""
+    info = {}
+    
+    # Extract body/response content
+    if hasattr(error_obj, 'body') and error_obj.body:
+        info['body'] = error_obj.body
+        # Try to parse JSON body for additional error information
+        if isinstance(error_obj.body, str):
+            try:
+                body_data = json.loads(error_obj.body)
+                if isinstance(body_data, dict) and 'error' in body_data:
+                    error_data = body_data['error']
+                    if isinstance(error_data, dict):
+                        # Extract additional error details from body
+                        info.update({
+                            'body_message': error_data.get('message'),
+                            'body_type': error_data.get('type'),
+                            'body_code': error_data.get('code')
+                        })
+            except json.JSONDecodeError:
+                pass
+    elif hasattr(error_obj, 'response') and hasattr(error_obj.response, 'text'):
+        info['body'] = error_obj.response.text
+        
+    return info
+
+
+def _extract_openai_error_info(error_obj) -> Dict:
+    """Extract specific information from OpenAI API errors."""
+    info = {}
+    
+    # For openai.APIError specifically, try to extract more details
+    if hasattr(error_obj, '__dict__'):
+        error_dict = error_obj.__dict__
+        if 'response' in error_dict:
+            response = error_dict['response']
+            if hasattr(response, 'status_code'):
+                info['status_code'] = response.status_code
+            if hasattr(response, 'json'):
+                try:
+                    response_json = response.json()
+                    if isinstance(response_json, dict) and 'error' in response_json:
+                        error_data = response_json['error']
+                        if isinstance(error_data, dict):
+                            info.update({
+                                'api_message': error_data.get('message'),
+                                'api_type': error_data.get('type'),
+                                'api_code': error_data.get('code')
+                            })
+                except:
+                    pass
+                    
+    return info
+
+
 def extract_error_details(error_obj) -> Dict:
     """
     Extract error details from various error object types.
@@ -224,73 +478,32 @@ def extract_error_details(error_obj) -> Dict:
     }
     
     try:
-        # Extract basic information from the error object
+        # Extract basic information
+        basic_info = _extract_basic_error_info(error_obj)
+        details.update(basic_info)
         
-        # Try to get error message from various sources
-        if hasattr(error_obj, 'message') and error_obj.message:
-            details['message'] = str(error_obj.message)
-        elif hasattr(error_obj, '__str__'):
-            error_str = str(error_obj)
-            if error_str and error_str != repr(error_obj):
-                details['message'] = error_str
+        # Extract response body information
+        body_info = _extract_response_body_info(error_obj)
+        details.update(body_info)
         
-        # Extract status/error codes
-        if hasattr(error_obj, 'status_code'):
-            details['status_code'] = error_obj.status_code
-        elif hasattr(error_obj, 'code'):
-            details['code'] = error_obj.code
-            
-        # Extract error type
-        if hasattr(error_obj, 'type'):
-            details['type'] = error_obj.type
-        elif hasattr(error_obj, '__class__'):
-            details['type'] = error_obj.__class__.__name__
-            
-        # Extract request ID for debugging
-        if hasattr(error_obj, 'request_id'):
-            details['request_id'] = error_obj.request_id
-            
-        # Extract body/response content
-        if hasattr(error_obj, 'body') and error_obj.body:
-            details['body'] = error_obj.body
-            # Try to parse JSON body for additional error information
-            if isinstance(error_obj.body, str):
-                try:
-                    import json
-                    body_data = json.loads(error_obj.body)
-                    if isinstance(body_data, dict) and 'error' in body_data:
-                        error_data = body_data['error']
-                        if isinstance(error_data, dict):
-                            # Use body error message if we don't have one yet
-                            if not details['message'] and error_data.get('message'):
-                                details['message'] = str(error_data['message'])
-                            if not details['type'] and error_data.get('type'):
-                                details['type'] = str(error_data['type'])
-                            if not details['code'] and error_data.get('code'):
-                                details['code'] = error_data['code']
-                except:
-                    pass
-        elif hasattr(error_obj, 'response') and hasattr(error_obj.response, 'text'):
-            details['body'] = error_obj.response.text
-            
-        # For openai.APIError specifically, try to extract more details
-        if hasattr(error_obj, '__dict__'):
-            error_dict = error_obj.__dict__
-            if 'response' in error_dict:
-                response = error_dict['response']
-                if hasattr(response, 'status_code'):
-                    details['status_code'] = response.status_code
-                if hasattr(response, 'json'):
-                    try:
-                        response_json = response.json()
-                        if isinstance(response_json, dict) and 'error' in response_json:
-                            error_data = response_json['error']
-                            if isinstance(error_data, dict):
-                                details['message'] = details['message'] or error_data.get('message')
-                                details['type'] = details['type'] or error_data.get('type')
-                                details['code'] = details['code'] or error_data.get('code')
-                    except:
-                        pass
+        # Extract OpenAI-specific information
+        openai_info = _extract_openai_error_info(error_obj)
+        details.update(openai_info)
+        
+        # Use body/API info to fill in missing details (prioritize original values)
+        details['message'] = (details['message'] or 
+                            details.get('body_message') or 
+                            details.get('api_message'))
+        details['type'] = (details['type'] or 
+                         details.get('body_type') or 
+                         details.get('api_type'))
+        details['code'] = (details['code'] or 
+                         details.get('body_code') or 
+                         details.get('api_code'))
+        
+        # Clean up temporary fields
+        for key in ['body_message', 'body_type', 'body_code', 'api_message', 'api_type', 'api_code']:
+            details.pop(key, None)
                         
     except Exception as e:
         logger.warning(f"Error extracting error details: {e}")
@@ -429,17 +642,28 @@ def handle_api_error(response, context: str = "API call") -> Tuple[str, bool]:
         error_type = error_info.get('error_type', '')
         is_retryable = error_type in ['rate_limit_exceeded', 'temporary_unavailable']
         
-        logger.error(f"OpenRouter error in {context}: {error_info}")
+        # For major errors, create incident file
+        if error_type in ['requested_too_many_tokens', 'insufficient_quota', 'model_not_found']:
+            additional_info = {"openrouter_error_info": error_info}
+            _, _, incident_file = log_major_error(response, context, additional_info)
+            if incident_file:
+                user_message += f"\n\n📋 **Incident Report:** {incident_file}"
+        else:
+            logger.error(f"OpenRouter error in {context}: {error_info}")
+        
         return user_message, is_retryable
     
     # Enhanced fallback: Extract detailed error information
     error_details = extract_error_details(response)
     
-    # Log the extracted details for debugging
-    logger.error(f"API error in {context} - Details: {error_details}")
+    # For unknown errors, create incident file
+    additional_info = {"response_type": type(response).__name__}
+    enhanced_message, is_retryable, incident_file = log_major_error(response, context, additional_info)
     
-    # Create enhanced error message
-    return create_enhanced_error_message(error_details, context)
+    if incident_file:
+        enhanced_message += f"\n\n📋 **Incident Report:** {incident_file}"
+    
+    return enhanced_message, is_retryable
 
 
 def estimate_token_count(text: str) -> int:
