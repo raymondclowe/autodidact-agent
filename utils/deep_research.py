@@ -385,19 +385,19 @@ def guardian_fixer(raw_json_str, error_bullets, client, high_model=False):
 
 def extract_json_from_markdown(content: str) -> str:
     """
-    Extract JSON content from markdown code blocks.
+    Extract JSON content from markdown code blocks or by trimming intro text.
     
     Args:
-        content: Raw content that may contain JSON wrapped in markdown
+        content: Raw content that may contain JSON wrapped in markdown or with intro text
         
     Returns:
-        Extracted JSON string, or original content if no JSON block found
+        Extracted JSON string, or original content if no JSON found
     """
     lines = content.split('\n')
     json_start = -1
     json_end = -1
     
-    # Look for ```json ... ``` blocks
+    # First, look for ```json ... ``` blocks
     for i, line in enumerate(lines):
         stripped = line.strip()
         if stripped == '```json':
@@ -417,8 +417,50 @@ def extract_json_from_markdown(content: str) -> str:
             print(f"[extract_json_from_markdown] Warning: Extracted content doesn't look like JSON, using original")
             return content
     
-    # If no markdown blocks found, return original content
-    print(f"[extract_json_from_markdown] No JSON markdown block found, using original content")
+    # If no markdown blocks found, try to find JSON by looking for the first line with '{'
+    print(f"[extract_json_from_markdown] No JSON markdown block found, trying to find JSON start")
+    
+    # Look for the first line that starts with '{' (ignoring whitespace)
+    json_start_line = -1
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith('{'):
+            json_start_line = i
+            break
+    
+    if json_start_line != -1:
+        # Now find the matching closing brace by counting brace balance
+        brace_count = 0
+        json_end_line = -1
+        for i in range(json_start_line, len(lines)):
+            line = lines[i]
+            for char in line:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_end_line = i
+                        break
+            if json_end_line != -1:
+                break
+        
+        if json_end_line != -1:
+            # Extract the JSON content
+            json_lines = lines[json_start_line:json_end_line + 1]
+            json_candidate = '\n'.join(json_lines).strip()
+            
+            # Basic validation: should start with '{' and end with '}'
+            if json_candidate.startswith('{') and json_candidate.endswith('}'):
+                print(f"[extract_json_from_markdown] Found JSON by trimming intro text (length: {len(json_candidate)} chars)")
+                return json_candidate
+            else:
+                print(f"[extract_json_from_markdown] Found '{{' but content doesn't look like valid JSON structure")
+        else:
+            print(f"[extract_json_from_markdown] Found opening '{{' but no matching closing '}}'")
+    
+    # If no JSON structure found, return original content
+    print(f"[extract_json_from_markdown] No JSON found, using original content")
     return content
 
 
