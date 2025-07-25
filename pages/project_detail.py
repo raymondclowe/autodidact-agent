@@ -23,6 +23,7 @@ from backend.db import (
 from backend.jobs import start_deep_research_job, test_job
 from components.graph_viz import create_knowledge_graph
 from utils.config import save_project_files
+from utils.providers import get_model_for_task, get_provider_config, get_current_provider
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -58,14 +59,20 @@ def retry_with_o3(st, project):
     else:
         hours = 5
 
-    model_to_use_now = "o3"
+    # Let start_deep_research_job select the appropriate model for the current provider
+    model_to_use_now = None
 
     new_job_id = start_deep_research_job(project['topic'], hours, combined_text, model_to_use_now)
     print(f"[project_detail.py] New Job ID: {new_job_id}")
+    
+    # Get the actually selected model from the provider configuration for accurate tracking
+    from utils.providers import get_model_for_task
+    actual_model_used = get_model_for_task("deep_research")
+    
     update_project_with_job(
                 project_id=project_id,
                 job_id=new_job_id,
-                model_used=model_to_use_now,
+                model_used=actual_model_used,
                 status='processing'
             )
     print(f"[project_detail.py] Project ID: {project_id}")
@@ -106,6 +113,27 @@ if st.session_state.get('retry_job', False):
     original_model = project.get('model_used', None)
     logger.info(f"Original model for retry: {original_model}")
     
+    # Check if the original model is compatible with the current provider
+    def is_model_compatible_with_provider(model_name, provider=None):
+        """Check if a model is compatible with the current or specified provider"""
+        if not model_name:
+            return True  # None/empty models are always compatible (will auto-select)
+        
+        if provider is None:
+            provider = get_current_provider()
+        
+        try:
+            provider_config = get_provider_config(provider)
+            # Check if the model is one of the models supported by this provider
+            supported_models = list(provider_config.get('token_limits', {}).keys())
+            return model_name in supported_models
+        except:
+            return False
+    
+    if not is_model_compatible_with_provider(original_model):
+        logger.info(f"Original model '{original_model}' not compatible with current provider, using auto-selection")
+        original_model = None
+    
     # Ensure we have a valid model for retry - fallback to None to let start_deep_research_job choose
     # If original_model is None, start_deep_research_job will select an appropriate model
     
@@ -135,11 +163,14 @@ if st.session_state.get('retry_job', False):
         original_model
     )
     
+    # Get the actually selected model for accurate tracking
+    actual_model_used = original_model or get_model_for_task("deep_research")
+    
     # Update project with new job
     update_project_with_job(
         project_id=project_id,
         job_id=new_job_id,
-        model_used=original_model,
+        model_used=actual_model_used,
         status='processing'
     )
     
