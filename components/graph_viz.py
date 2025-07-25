@@ -52,7 +52,7 @@ def create_knowledge_graph(
              ranksep='1.5',      # Increase separation between ranks
              nodesep='0.5',      # Node separation
              fontname='Arial',
-             fontsize='12',
+             fontsize='16',
              bgcolor='transparent'
     )
     
@@ -61,7 +61,7 @@ def create_knowledge_graph(
              shape='box',
              style='rounded,filled',
              fontname='Arial',
-             fontsize='10',
+             fontsize='14',
              margin='0.2',
              penwidth='1.5'
     )
@@ -69,7 +69,7 @@ def create_knowledge_graph(
     # Configure default edge attributes
     dot.attr('edge',
              fontname='Arial',
-             fontsize='9',
+             fontsize='12',
              arrowsize='0.8'
     )
     
