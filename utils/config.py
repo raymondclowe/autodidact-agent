@@ -5,6 +5,7 @@ Handles API key management, paths, and environment settings
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -87,8 +88,16 @@ def configure_debug_logging():
         root_logger.addHandler(root_handler)
         root_logger.setLevel(logging.INFO)
     
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('autodidact')
     logger.info(f"Debug mode enabled - logging to {DEBUG_LOG_FILE}")
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"Working directory: {os.getcwd()}")
+    logger.info(f"Environment variables: AUTODIDACT_DEBUG={os.getenv('AUTODIDACT_DEBUG', 'not set')}")
+    
+    # Force flush to ensure content is written
+    for handler in logger.handlers:
+        if hasattr(handler, 'flush'):
+            handler.flush()
     
     return DEBUG_LOG_FILE
 
@@ -286,6 +295,16 @@ def save_project_files(project_id: str, report_markdown: str, graph_data: Dict, 
     
     return str(report_path)
 
+
+def get_debug_log_file():
+    """Get the current debug log file path if debug mode is active"""
+    return DEBUG_LOG_FILE
+
+def list_debug_log_files():
+    """List all debug log files in the config directory"""
+    ensure_config_directory()
+    debug_files = list(CONFIG_DIR.glob("debug-*.log"))
+    return sorted(debug_files, key=lambda x: x.stat().st_mtime, reverse=True)
 
 # Initialize configuration on import
 ensure_config_directory() 
