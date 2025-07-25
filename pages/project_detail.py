@@ -265,7 +265,7 @@ elif project['status'] == 'failed':
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("Retry with o3", type="primary"):
+        if st.button("Retry Research", type="primary"):
             retry_with_o3(st, project)
     with col2:
         if st.button("➕ Create New Project", type="primary"):
