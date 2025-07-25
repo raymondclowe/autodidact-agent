@@ -162,6 +162,10 @@ def get_speech_enabled_content(content: str, add_speaker_button: bool = True, au
     
     speech_html = ""
     
+    # Handle None or empty content
+    if not content:
+        return content, speech_html
+    
     # Add TTS component for auto-speak
     if auto_speak and content.strip():
         speech_html += create_tts_component(content, auto_trigger=True)
