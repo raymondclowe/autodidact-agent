@@ -22,9 +22,7 @@ import pickle
 from datetime import datetime
 from typing import Any, Dict
 
-# Show sidebar navigation
-from components.sidebar import show_sidebar
-show_sidebar()
+# Sidebar is shown globally in app.py
 
 # Initialize speech functionality
 initialize_speech_state()
