@@ -215,9 +215,11 @@ def load_context_node(state: SessionState) -> SessionState:
         learner_profile_context = ""
         try:
             from backend.learner_profile import learner_profile_manager
+            user_id = project.get('user_id', 'default') if project else 'default'
             learner_profile_context = learner_profile_manager.get_profile_context_for_session(
                 state['project_id'], 
-                node_data.get('project_topic', '')
+                node_data.get('project_topic', ''),
+                user_id
             )
         except Exception as e:
             logger.warning(f"Could not load learner profile context: {e}")

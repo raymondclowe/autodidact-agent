@@ -836,7 +836,7 @@ def get_project(project_id: str) -> Optional[Dict]:
     """Get project details by ID"""
     with get_db_connection() as conn:
         cursor = conn.execute(
-            "SELECT id, name, topic, report_path, resources_json, created_at, job_id, model_used, status, hours FROM project WHERE id = ?", 
+            "SELECT id, name, topic, report_path, resources_json, created_at, job_id, model_used, status, hours, user_id FROM project WHERE id = ?", 
             (project_id,)
         )
         row = cursor.fetchone()
@@ -852,7 +852,8 @@ def get_project(project_id: str) -> Optional[Dict]:
                 "job_id": row[6],
                 "model_used": row[7],
                 "status": row[8] or 'completed',  # Default for old projects
-                "hours": row[9] or 5  # Default to 5 hours for old projects
+                "hours": row[9] or 5,  # Default to 5 hours for old projects
+                "user_id": row[10] or 'default'  # Default user for backwards compatibility
             }
             # first get all the edges which have `project_id` = project_id
             edges = get_edges_for_project(conn, project_id)
