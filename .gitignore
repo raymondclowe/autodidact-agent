@@ -184,3 +184,4 @@ test_issue_30_fix.py
 test_multiple_messages_fix.py
 test_learner_profile.py
 test_multi_user.py
+demo_multi_user.py
