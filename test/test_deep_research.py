@@ -4,7 +4,7 @@ import utils.deep_research as deep_research
 
 class TestDeepResearch(unittest.TestCase):
     def test_lint(self):
-        payload = '{"key": "value"}'
+        payload = '{"resources": [], "nodes": []}'
         result = deep_research.lint(payload)
         self.assertIsInstance(result, list)
 
