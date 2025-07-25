@@ -869,11 +869,18 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                         logger.error(f"[API RETURN] Perplexity deep research failed - token limit | Model: {research_model} | Job ID: {pseudo_job_id}")
                         return
                     
-                    long_timeout_client = openai.OpenAI(
-                        api_key=client.api_key,
-                        base_url=client.base_url,
-                        timeout=PERPLEXITY_DEEP_RESEARCH_TIMEOUT
-                    )
+                    # Create timeout client preserving OpenRouter headers if present
+                    client_kwargs = {
+                        "api_key": client.api_key,
+                        "base_url": client.base_url,
+                        "timeout": PERPLEXITY_DEEP_RESEARCH_TIMEOUT
+                    }
+                    
+                    # Preserve OpenRouter app attribution headers if they exist
+                    if hasattr(client, 'default_headers') and client.default_headers:
+                        client_kwargs["default_headers"] = client.default_headers
+                    
+                    long_timeout_client = openai.OpenAI(**client_kwargs)
                     
                     # Calculate safe max_tokens to avoid exceeding model limits
                     full_prompt = optimized_prompt + "\n\n" + user_message
