@@ -5,12 +5,19 @@ Shows on all pages with project list and navigation
 
 import streamlit as st
 from backend.db import get_all_projects
+from components.user_selector import show_user_selector, initialize_user_session, get_current_user_id
 from datetime import datetime
 
 def show_sidebar():
     """Show sidebar with project list on all pages"""
     with st.sidebar:
         st.markdown("# Autodidact")
+
+        # Initialize user session
+        initialize_user_session()
+        
+        # Show user selector
+        show_user_selector()
 
         st.page_link("pages/home.py", label="Home", icon="🏠")
         st.page_link("pages/settings.py", label="Settings", icon="⚙️")
@@ -20,9 +27,10 @@ def show_sidebar():
             st.switch_page("pages/new_project.py")
         st.markdown("---")
         
-        # Project list
+        # Project list (filtered by current user)
         st.markdown("### Your Projects")
-        projects = get_all_projects()
+        current_user_id = get_current_user_id()
+        projects = get_all_projects(current_user_id)
         
         if projects:
             # Get current project from query params

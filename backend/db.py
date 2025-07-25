@@ -119,6 +119,12 @@ def get_db_connection():
 def init_database():
     """Initialize the database with the schema"""
     schema = """
+    CREATE TABLE IF NOT EXISTS user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS project (
         id TEXT PRIMARY KEY,
         name TEXT,
@@ -129,7 +135,9 @@ def init_database():
         job_id TEXT,
         model_used TEXT,
         status TEXT DEFAULT 'completed',
-        hours INTEGER DEFAULT 5
+        hours INTEGER DEFAULT 5,
+        user_id TEXT DEFAULT 'default',
+        FOREIGN KEY (user_id) REFERENCES user(id)
     );
 
     CREATE TABLE IF NOT EXISTS node (
@@ -191,7 +199,9 @@ def init_database():
     CREATE TABLE IF NOT EXISTS generic_learner_profile (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         profile_xml TEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        user_id TEXT DEFAULT 'default',
+        FOREIGN KEY (user_id) REFERENCES user(id)
     );
 
     CREATE TABLE IF NOT EXISTS topic_learner_profile (
@@ -200,10 +210,14 @@ def init_database():
         topic TEXT NOT NULL,
         profile_xml TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (project_id) REFERENCES project(id)
+        user_id TEXT DEFAULT 'default',
+        FOREIGN KEY (project_id) REFERENCES project(id),
+        FOREIGN KEY (user_id) REFERENCES user(id)
     );
     
     -- Create indexes for common queries
+    CREATE INDEX IF NOT EXISTS idx_user_username ON user(username);
+    CREATE INDEX IF NOT EXISTS idx_project_user ON project(user_id);
     CREATE INDEX IF NOT EXISTS idx_node_project ON node(project_id);
     CREATE INDEX IF NOT EXISTS idx_node_original ON node(original_id);
     CREATE INDEX IF NOT EXISTS idx_edge_project ON edge(project_id);
@@ -212,8 +226,9 @@ def init_database():
     CREATE INDEX IF NOT EXISTS idx_session_project ON session(project_id);
     CREATE INDEX IF NOT EXISTS idx_session_node ON session(node_id);
     CREATE INDEX IF NOT EXISTS idx_transcript_session ON transcript(session_id);
+    CREATE INDEX IF NOT EXISTS idx_generic_profile_user ON generic_learner_profile(user_id);
     CREATE INDEX IF NOT EXISTS idx_generic_profile_updated ON generic_learner_profile(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_topic_profile_project_topic ON topic_learner_profile(project_id, topic);
+    CREATE INDEX IF NOT EXISTS idx_topic_profile_user_project_topic ON topic_learner_profile(user_id, project_id, topic);
     CREATE INDEX IF NOT EXISTS idx_topic_profile_updated ON topic_learner_profile(updated_at);
     """
     
@@ -224,9 +239,10 @@ def init_database():
     # Run necessary migrations for existing databases
     _ensure_session_state_column()
     _ensure_learner_profile_tables()
+    _ensure_user_tables_and_migration()
 
 
-def create_project(topic: str, report_path: str, resources: Dict) -> str:
+def create_project(topic: str, report_path: str, resources: Dict, user_id: str = 'default') -> str:
     """Create a new project and return its ID"""
     project_id = str(uuid.uuid4())
     
@@ -234,13 +250,14 @@ def create_project(topic: str, report_path: str, resources: Dict) -> str:
         try:
             conn.execute("BEGIN TRANSACTION")
             conn.execute("""
-                INSERT INTO project (id, topic, report_path, resources_json)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO project (id, topic, report_path, resources_json, user_id)
+                VALUES (?, ?, ?, ?, ?)
             """, (
                 project_id,
                 topic,
                 report_path,
-                json.dumps(resources)
+                json.dumps(resources),
+                user_id
             ))
             conn.commit()
             return project_id
@@ -249,7 +266,7 @@ def create_project(topic: str, report_path: str, resources: Dict) -> str:
             raise RuntimeError(f"Failed to create project: {str(e)}")
 
 
-def create_project_with_job(topic: str, name: str, job_id: str, model_used: str, status: str = 'processing', hours: int = 5) -> str:
+def create_project_with_job(topic: str, name: str, job_id: str, model_used: str, status: str = 'processing', hours: int = 5, user_id: str = 'default') -> str:
     """Create a new project with a job ID for background processing"""
     project_id = str(uuid.uuid4())
     
@@ -257,8 +274,8 @@ def create_project_with_job(topic: str, name: str, job_id: str, model_used: str,
         try:
             conn.execute("BEGIN TRANSACTION")
             conn.execute("""
-                INSERT INTO project (id, name, topic, job_id, model_used, status, hours)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO project (id, name, topic, job_id, model_used, status, hours, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 project_id,
                 name,
@@ -266,7 +283,8 @@ def create_project_with_job(topic: str, name: str, job_id: str, model_used: str,
                 job_id,
                 model_used,
                 status,
-                hours
+                hours,
+                user_id
             ))
             conn.commit()
             return project_id
@@ -935,8 +953,8 @@ def get_latest_session_for_node(project_id: str, node_id: str) -> Optional[str]:
         return result[0] if result else None
 
 
-def get_all_projects() -> List[Dict[str, Any]]:
-    """Get all projects with basic stats"""
+def get_all_projects(user_id: str = 'default') -> List[Dict[str, Any]]:
+    """Get all projects with basic stats for a specific user"""
     with get_db_connection() as conn:
         cursor = conn.execute("""
             SELECT 
@@ -950,10 +968,10 @@ def get_all_projects() -> List[Dict[str, Any]]:
                 ROUND(AVG(n.mastery) * 100) as progress
             FROM project p
             LEFT JOIN node n ON p.id = n.project_id
+            WHERE p.user_id = ?
             GROUP BY p.id
             ORDER BY p.created_at DESC
-        """)
-        
+        """, (user_id,))
         return [
             {
                 "id": row[0],
@@ -1338,6 +1356,65 @@ def _ensure_learner_profile_tables():
             conn.commit()
     except Exception as e:
         logger.warning(f"Failed to ensure learner profile tables: {e}")
+
+
+def _ensure_user_tables_and_migration():
+    """Ensure user table exists and migrate existing data to default user"""
+    try:
+        with get_db_connection() as conn:
+            # Check if user table exists
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name = 'user'")
+            user_table_exists = cursor.fetchone() is not None
+            
+            # Create user table if it doesn't exist
+            if not user_table_exists:
+                logger.info("Creating user table and migrating existing data...")
+                
+                # Create user table
+                conn.execute("""
+                    CREATE TABLE user (
+                        id TEXT PRIMARY KEY,
+                        username TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create default user
+                conn.execute("""
+                    INSERT INTO user (id, username, created_at)
+                    VALUES ('default', 'Default User', CURRENT_TIMESTAMP)
+                """)
+                
+                logger.info("Created user table and default user")
+            
+            # Check if project table has user_id column
+            cursor = conn.execute("PRAGMA table_info(project)")
+            project_columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'user_id' not in project_columns:
+                conn.execute("ALTER TABLE project ADD COLUMN user_id TEXT DEFAULT 'default'")
+                logger.info("Added user_id column to project table")
+            
+            # Check if generic_learner_profile table has user_id column
+            cursor = conn.execute("PRAGMA table_info(generic_learner_profile)")
+            generic_profile_columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'user_id' not in generic_profile_columns:
+                conn.execute("ALTER TABLE generic_learner_profile ADD COLUMN user_id TEXT DEFAULT 'default'")
+                logger.info("Added user_id column to generic_learner_profile table")
+            
+            # Check if topic_learner_profile table has user_id column
+            cursor = conn.execute("PRAGMA table_info(topic_learner_profile)")
+            topic_profile_columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'user_id' not in topic_profile_columns:
+                conn.execute("ALTER TABLE topic_learner_profile ADD COLUMN user_id TEXT DEFAULT 'default'")
+                logger.info("Added user_id column to topic_learner_profile table")
+            
+            conn.commit()
+            
+    except Exception as e:
+        logger.warning(f"Failed to ensure user tables and migration: {e}")
 
 
 # Initialize database on module import
