@@ -43,6 +43,10 @@ class UserManager:
         if len(user_id) < 3 or len(username) < 1:
             raise ValueError("User ID must be at least 3 characters, username at least 1 character")
         
+        # Validate user ID format - must be alphanumeric with no spaces or special characters
+        if ' ' in user_id or not user_id.isalnum():
+            raise ValueError("User ID must be alphanumeric with no spaces or special characters")
+        
         # Check if user already exists
         if self.get_user(user_id):
             raise ValueError(f"User ID '{user_id}' already exists")
