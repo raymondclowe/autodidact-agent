@@ -27,7 +27,7 @@ Each user has their own:
 ### Adding a New User
 1. Look for the "👤 User" section in the sidebar
 2. Click "➕ Add User"
-3. Enter a User ID (3+ characters, no spaces)
+3. Enter a User ID (3+ characters, alphanumeric, no spaces)
 4. Enter a Display Name
 5. Click "Create"
 
