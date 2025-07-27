@@ -255,6 +255,7 @@ class LearnerProfileManager:
         try:
             generic_profile = self.get_generic_profile()
             topic_profile = self.get_topic_profile(project_id, topic)
+            questions_pref = self.get_questions_per_step_preference(project_id, topic)
             
             # Extract key information from profiles for prompt context
             context = f"""LEARNER PROFILE CONTEXT:
@@ -264,6 +265,8 @@ Generic Learning Profile:
 
 Topic-Specific Profile for "{topic}":
 {self._extract_key_profile_info(topic_profile)}
+
+Questions Per Step Preference: {questions_pref}
 
 Please use this learner profile information to personalize the learning session."""
             
@@ -291,6 +294,30 @@ Please use this learner profile information to personalize the learning session.
                 
         except ET.ParseError:
             return "- Profile parsing error"
+    
+    def get_questions_per_step_preference(self, project_id: str, topic: str) -> str:
+        """Extract questions_per_step preference from learner profiles"""
+        try:
+            # First check topic-specific preference
+            topic_profile = self.get_topic_profile(project_id, topic)
+            topic_root = ET.fromstring(topic_profile)
+            topic_questions_pref = topic_root.find(".//questions_per_step_preference")
+            if topic_questions_pref is not None and topic_questions_pref.text not in PLACEHOLDER_VALUES:
+                return topic_questions_pref.text.strip()
+            
+            # Fall back to generic preference
+            generic_profile = self.get_generic_profile()
+            generic_root = ET.fromstring(generic_profile)
+            generic_questions_pref = generic_root.find(".//questions_per_step")
+            if generic_questions_pref is not None and generic_questions_pref.text not in PLACEHOLDER_VALUES:
+                return generic_questions_pref.text.strip()
+            
+            # Default to moderate if not determined
+            return "moderate"
+            
+        except (ET.ParseError, Exception) as e:
+            logger.warning(f"Error extracting questions_per_step preference: {e}")
+            return "moderate"
     
     def _sanitize_text_for_ai(self, text: str) -> str:
         """Sanitize text before sending to AI to prevent potential injection issues"""
@@ -323,6 +350,10 @@ Here is the lesson transcript from a recent learning session:
 
 Please analyze this lesson transcript and determine if the generic learner profile needs updating. Look for evidence of:
 - Learning preferences (instruction style, example preferences, hands-on vs theoretical, pacing, feedback)
+- Questions per step preference:
+  * "minimal" - student answers only 1 question fully, gives brief/shallow responses to additional questions
+  * "moderate" - student engages with 2-3 questions per step comfortably
+  * "extensive" - student prefers many questions, asks for more, goes deep on multiple questions
 - Strengths and needs (conceptual, metacognitive, motivational)
 - Prior knowledge and misconceptions
 - Barriers and supports (content difficulties, representation issues, effective supports)
@@ -349,6 +380,10 @@ Here is the lesson transcript from a recent learning session on this topic:
 Please analyze this lesson transcript and determine if the topic-specific learner profile needs updating. Look for evidence of:
 - Topic understanding (knowledge level, concepts mastered/struggling, prerequisite gaps)
 - Topic-specific learning preferences (approaches, examples, representations, practice methods)
+- Questions per step preference for this topic:
+  * "minimal" - student answers only 1 question fully, gives brief/shallow responses to additional questions
+  * "moderate" - student engages with 2-3 questions per step comfortably  
+  * "extensive" - student prefers many questions, asks for more, goes deep on multiple questions
 - Topic misconceptions (identified misconceptions, recurring errors, confusion areas)
 - Topic engagement (interest level, motivating/challenging aspects, real-world connections)
 - Learning progression (mastered objectives, current focus, next steps, pace observations)
