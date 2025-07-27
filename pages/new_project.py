@@ -218,13 +218,15 @@ elif st.session_state.new_project_view == 'confirmation':
                         print(f"[New Project] Started deep research job: {job_id}")
                     
                     # Create project with job_id
+                    from components.user_selector import get_current_user_id
                     project_id = create_project_with_job(
                         topic=st.session_state.final_topic,
                         name=st.session_state.init_topic,  # Use initial topic as name
                         job_id=job_id,
                         model_used=model_to_use,
                         status='processing',
-                        hours=st.session_state.final_hours
+                        hours=st.session_state.final_hours,
+                        user_id=get_current_user_id()
                     )
                     print(f"[New Project] Created project: {project_id}")
                     

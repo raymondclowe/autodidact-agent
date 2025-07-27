@@ -49,19 +49,20 @@ class LearnerProfileManager:
             self._profile_cache.clear()
             self._last_cache_clear = datetime.now()
     
-    def get_generic_profile(self) -> str:
-        """Get the current generic learner profile XML"""
+    def get_generic_profile(self, user_id: str = 'default') -> str:
+        """Get the current generic learner profile XML for a specific user"""
         self._clear_expired_cache()
         
-        cache_key = "generic_profile"
+        cache_key = f"generic_profile_{user_id}"
         if cache_key in self._profile_cache:
             return self._profile_cache[cache_key]
         
         with get_db_connection() as conn:
             cursor = conn.execute("""
                 SELECT profile_xml FROM generic_learner_profile 
+                WHERE user_id = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """)
+            """, (user_id,))
             row = cursor.fetchone()
             
             if row:
@@ -74,20 +75,20 @@ class LearnerProfileManager:
                 self._profile_cache[cache_key] = template
                 return template
     
-    def get_topic_profile(self, project_id: str, topic: str) -> str:
-        """Get the topic-specific learner profile XML for a project"""
+    def get_topic_profile(self, project_id: str, topic: str, user_id: str = 'default') -> str:
+        """Get the topic-specific learner profile XML for a project and user"""
         self._clear_expired_cache()
         
-        cache_key = f"topic_profile_{project_id}_{topic}"
+        cache_key = f"topic_profile_{user_id}_{project_id}_{topic}"
         if cache_key in self._profile_cache:
             return self._profile_cache[cache_key]
         
         with get_db_connection() as conn:
             cursor = conn.execute("""
                 SELECT profile_xml FROM topic_learner_profile 
-                WHERE project_id = ? AND topic = ?
+                WHERE user_id = ? AND project_id = ? AND topic = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (project_id, topic))
+            """, (user_id, project_id, topic))
             row = cursor.fetchone()
             
             if row:
@@ -100,31 +101,31 @@ class LearnerProfileManager:
                 self._profile_cache[cache_key] = template
                 return template
     
-    def save_generic_profile(self, profile_xml: str):
-        """Save updated generic learner profile"""
+    def save_generic_profile(self, profile_xml: str, user_id: str = 'default'):
+        """Save updated generic learner profile for a specific user"""
         with get_db_connection() as conn:
             conn.execute("""
-                INSERT INTO generic_learner_profile (profile_xml, updated_at)
-                VALUES (?, CURRENT_TIMESTAMP)
-            """, (profile_xml,))
+                INSERT INTO generic_learner_profile (profile_xml, updated_at, user_id)
+                VALUES (?, CURRENT_TIMESTAMP, ?)
+            """, (profile_xml, user_id))
             conn.commit()
-            logger.info("Generic learner profile updated")
+            logger.info(f"Generic learner profile updated for user {user_id}")
         
         # Clear cache to force reload
-        self._profile_cache.pop("generic_profile", None)
+        self._profile_cache.pop(f"generic_profile_{user_id}", None)
     
-    def save_topic_profile(self, project_id: str, topic: str, profile_xml: str):
-        """Save updated topic-specific learner profile"""
+    def save_topic_profile(self, project_id: str, topic: str, profile_xml: str, user_id: str = 'default'):
+        """Save updated topic-specific learner profile for a specific user"""
         with get_db_connection() as conn:
             conn.execute("""
-                INSERT INTO topic_learner_profile (project_id, topic, profile_xml, updated_at)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            """, (project_id, topic, profile_xml))
+                INSERT INTO topic_learner_profile (project_id, topic, profile_xml, updated_at, user_id)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+            """, (project_id, topic, profile_xml, user_id))
             conn.commit()
-            logger.info(f"Topic learner profile updated for project {project_id}")
+            logger.info(f"Topic learner profile updated for user {user_id}, project {project_id}")
         
         # Clear cache to force reload
-        cache_key = f"topic_profile_{project_id}"
+        cache_key = f"topic_profile_{user_id}_{project_id}"
         self._profile_cache.pop(cache_key, None)
     
     def update_profiles_from_session(self, session_id: str):
@@ -137,11 +138,13 @@ class LearnerProfileManager:
         try:
             # Get session information
             session_info = get_session_info(session_id)
+            user_id = 'default'  # Default fallback
+            
             if not session_info:
                 # Try to get basic session info from session table directly
                 with get_db_connection() as conn:
                     cursor = conn.execute("""
-                        SELECT s.project_id, p.topic 
+                        SELECT s.project_id, p.topic, p.user_id
                         FROM session s 
                         JOIN project p ON s.project_id = p.id 
                         WHERE s.id = ?
@@ -152,6 +155,7 @@ class LearnerProfileManager:
                             'project_id': row[0],
                             'project_topic': row[1]
                         }
+                        user_id = row[2] or 'default'
                     else:
                         logger.error(f"Session {session_id} not found")
                         return
@@ -163,6 +167,7 @@ class LearnerProfileManager:
                     logger.error(f"Project {session_info['project_id']} not found")
                     return
                 session_info['project_topic'] = project['topic']
+                user_id = project.get('user_id', 'default')
             
             # Get session transcript
             transcript = get_transcript_for_session(session_id)
@@ -174,16 +179,17 @@ class LearnerProfileManager:
             transcript_text = self._format_transcript_for_analysis(transcript)
             
             # Update generic profile
-            self._update_generic_profile_with_ai(transcript_text)
+            self._update_generic_profile_with_ai(transcript_text, user_id)
             
             # Update topic-specific profile
             self._update_topic_profile_with_ai(
                 session_info['project_id'], 
                 session_info['project_topic'], 
-                transcript_text
+                transcript_text,
+                user_id
             )
             
-            logger.info(f"Profiles updated for session {session_id}")
+            logger.info(f"Profiles updated for session {session_id}, user {user_id}")
             
         except Exception as e:
             logger.error(f"Error updating profiles for session {session_id}: {e}")
@@ -224,37 +230,37 @@ class LearnerProfileManager:
         except Exception as e:
             logger.error(f"Error updating {profile_type} profile with AI: {e}")
     
-    def _update_generic_profile_with_ai(self, transcript_text: str):
+    def _update_generic_profile_with_ai(self, transcript_text: str, user_id: str = 'default'):
         """Use AI to update the generic learner profile based on session transcript"""
-        current_profile = self.get_generic_profile()
+        current_profile = self.get_generic_profile(user_id)
         
         # Sanitize transcript text to prevent potential injection issues
         sanitized_transcript = self._sanitize_text_for_ai(transcript_text)
         
         prompt = self._build_generic_profile_update_prompt(current_profile, sanitized_transcript)
         
-        save_callback = lambda result: self._validate_and_save_profile(result, "generic")
+        save_callback = lambda result: self._validate_and_save_profile(result, "generic", user_id=user_id)
         
         self._update_profile_with_ai(prompt, save_callback, "generic")
     
-    def _update_topic_profile_with_ai(self, project_id: str, topic: str, transcript_text: str):
+    def _update_topic_profile_with_ai(self, project_id: str, topic: str, transcript_text: str, user_id: str = 'default'):
         """Use AI to update the topic-specific learner profile based on session transcript"""
-        current_profile = self.get_topic_profile(project_id, topic)
+        current_profile = self.get_topic_profile(project_id, topic, user_id)
         
         # Sanitize transcript text to prevent potential injection issues
         sanitized_transcript = self._sanitize_text_for_ai(transcript_text)
         
         prompt = self._build_topic_profile_update_prompt(current_profile, topic, sanitized_transcript)
         
-        save_callback = lambda result: self._validate_and_save_profile(result, "topic", project_id, topic)
+        save_callback = lambda result: self._validate_and_save_profile(result, "topic", project_id, topic, user_id)
         
         self._update_profile_with_ai(prompt, save_callback, f"topic (project {project_id})")
     
-    def get_profile_context_for_session(self, project_id: str, topic: str) -> str:
+    def get_profile_context_for_session(self, project_id: str, topic: str, user_id: str = 'default') -> str:
         """Get formatted profile information to include in session prompts"""
         try:
-            generic_profile = self.get_generic_profile()
-            topic_profile = self.get_topic_profile(project_id, topic)
+            generic_profile = self.get_generic_profile(user_id)
+            topic_profile = self.get_topic_profile(project_id, topic, user_id)
             
             # Extract key information from profiles for prompt context
             context = f"""LEARNER PROFILE CONTEXT:
@@ -359,7 +365,7 @@ If updates are needed, provide the complete updated XML profile with specific ob
 
 Is the profile accurate? Does it need updating? Have we learned something new about how this student best learns this specific topic?"""
     
-    def _validate_and_save_profile(self, profile_xml: str, profile_type: str, project_id: Optional[str] = None, topic: Optional[str] = None) -> bool:
+    def _validate_and_save_profile(self, profile_xml: str, profile_type: str, project_id: Optional[str] = None, topic: Optional[str] = None, user_id: str = 'default') -> bool:
         """Validate XML and save profile. Returns True if successful, False otherwise."""
         try:
             # Parse XML to validate structure
@@ -388,12 +394,12 @@ Is the profile accurate? Does it need updating? Have we learned something new ab
             
             # Save the profile
             if profile_type == "generic":
-                self.save_generic_profile(profile_xml)
+                self.save_generic_profile(profile_xml, user_id)
             elif profile_type == "topic":
                 if not project_id or not topic:
                     logger.error("project_id and topic are required for topic profile")
                     return False
-                self.save_topic_profile(project_id, topic, profile_xml)
+                self.save_topic_profile(project_id, topic, profile_xml, user_id)
             
             return True
             
