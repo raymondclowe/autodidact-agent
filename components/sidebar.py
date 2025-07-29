@@ -15,13 +15,13 @@ def show_sidebar():
         st.page_link("pages/home.py", label="Home", icon="🏠")
         st.page_link("pages/settings.py", label="Settings", icon="⚙️")
         
-        # New Project button
-        if st.button("➕ New Project", type="primary", use_container_width=True):
+        # New Course button
+        if st.button("➕ New Course", type="primary", use_container_width=True):
             st.switch_page("pages/new_project.py")
         st.markdown("---")
         
-        # Project list
-        st.markdown("### Your Projects")
+        # Course list
+        st.markdown("### Your Courses")
         projects = get_all_projects()
         
         if projects:
@@ -76,7 +76,7 @@ def show_sidebar():
                     # else:
                     #     st.caption(f"📅 {time_str}")
         else:
-            st.info("No projects yet. Click 'New Project' to start!")
+            st.info("No courses yet. Click 'New Course' to start!")
         
         # Speech Controls
         st.markdown("---")

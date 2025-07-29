@@ -98,7 +98,7 @@ project = get_project(project_id)
 #     print(f"[project_detail.py] Project: {project}")
 
 if not project:
-    st.error("Project not found!")
+    st.error("Course not found!")
     if st.button("Go to Home"):
         st.switch_page("pages/home.py")
     st.stop()
@@ -268,7 +268,7 @@ elif project['status'] == 'failed':
         if st.button("Retry Research", type="primary"):
             retry_with_o3(st, project)
     with col2:
-        if st.button("➕ Create New Project", type="primary"):
+        if st.button("➕ Create New Course", type="primary"):
             st.switch_page("pages/new_project.py")
     with col3:
         if st.button("🏠 Go Home"):
@@ -283,7 +283,7 @@ elif project['status'] == 'completed':
     
     with col1:
         # Session controls section
-        st.markdown("### 🎓 Learning Sessions")
+        st.markdown("### 🎓 Learning Lessons")
         
         # Get available nodes
         next_nodes = get_next_nodes(project_id)
@@ -307,8 +307,8 @@ elif project['status'] == 'completed':
                     format_func=lambda x: f"📖 {next(n['label'] for n in next_nodes if n['id'] == x)}",
                     label_visibility="collapsed"
                 )
-                if st.button("Start Session →", type="primary", use_container_width=True):
-                    logger.info(f"Start Session button clicked for project_id={project_id}, selected_node={selected}")
+                if st.button("Start Lesson →", type="primary", use_container_width=True):
+                    logger.info(f"Start Lesson button clicked for project_id={project_id}, selected_node={selected}")
                     try:
                         # Create new session and navigate
                         logger.debug(f"Calling create_session with project_id={project_id}, node_id={selected}")
@@ -368,21 +368,21 @@ elif project['status'] == 'completed':
                 st.error(f"Error loading report: {str(e)}")
         
         # Add dropdown menu for project actions
-        with st.expander("⚙️ Project Actions"):
+        with st.expander("⚙️ Course Actions"):
             col1_inner, col2_inner, col3_inner = st.columns([1, 1, 2])
             with col3_inner:
-                if st.button("🗑️ Delete Project", type="secondary", use_container_width=True):
+                if st.button("🗑️ Delete Course", type="secondary", use_container_width=True):
                     st.session_state.show_delete_confirmation = True
 
         # Confirmation dialog
         if st.session_state.get('show_delete_confirmation', False):
-            st.warning("⚠️ **Delete Project?**")
+            st.warning("⚠️ **Delete Course?**")
             st.error("This will permanently delete:")
             st.markdown("""
             - All learning progress and mastery scores
-            - All session transcripts  
+            - All lesson transcripts  
             - The knowledge graph and curriculum
-            - Project files and resources
+            - Course files and resources
             
             **This action cannot be undone!**
             """)
@@ -399,7 +399,7 @@ elif project['status'] == 'completed':
                             success = delete_project(project_id)
                             
                         if success:
-                            st.success("Project deleted successfully!")
+                            st.success("Course deleted successfully!")
                             time.sleep(1)
                             # Clear session state
                             if 'show_delete_confirmation' in st.session_state:
