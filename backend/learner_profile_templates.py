@@ -12,6 +12,7 @@ GENERIC_LEARNER_PROFILE_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
         <hands_on_vs_theoretical>to be determined</hands_on_vs_theoretical>
         <pacing_preference>to be determined</pacing_preference>
         <feedback_frequency>to be determined</feedback_frequency>
+        <questions_per_step>moderate</questions_per_step>
     </learning_preferences>
     
     <strengths_and_needs>
@@ -77,6 +78,7 @@ TOPIC_SPECIFIC_LEARNER_PROFILE_TEMPLATE = """<?xml version="1.0" encoding="UTF-8
         <effective_examples>to be determined</effective_examples>
         <preferred_representations>to be determined</preferred_representations>
         <successful_practice_methods>to be determined</successful_practice_methods>
+        <questions_per_step_preference>to be determined</questions_per_step_preference>
     </topic_specific_preferences>
     
     <topic_misconceptions>
