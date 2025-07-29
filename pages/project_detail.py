@@ -291,7 +291,7 @@ elif project['status'] == 'completed':
         if next_nodes:
             if len(next_nodes) == 1:
                 st.info(f"**Ready to learn:**\n\n📖 {next_nodes[0]['label']}")
-                if st.button("Start Session →", type="primary", use_container_width=True):
+                if st.button("Start Lesson →", type="primary", use_container_width=True):
                     # Create new session and navigate
                     # FIXME: start with new session and work on getting this flow working
                     session_id = create_session(project_id, next_nodes[0]['id'])
@@ -454,10 +454,10 @@ elif project['status'] == 'completed':
                 session_stats = get_session_stats(project_id)
                 if session_stats["total_sessions"] > 0:
                     st.markdown("---")
-                    st.markdown("### 📊 Session Statistics")
+                    st.markdown("### 📊 Lesson Statistics")
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Total Sessions", session_stats["total_sessions"])
+                        st.metric("Total Lessons", session_stats["total_sessions"])
                     with col2:
                         st.metric("Completed", session_stats["completed_sessions"])
                     with col3:
