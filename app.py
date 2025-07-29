@@ -59,9 +59,9 @@ st.session_state.debug_mode = DEBUG_MODE
 
 # Define pages
 home = st.Page("pages/home.py", title="Home", url_path="", default=True)
-new_project = st.Page("pages/new_project.py", title="New Project", url_path="new")
-project = st.Page("pages/project_detail.py", title="Project", url_path="project")
-session = st.Page("pages/session_detail.py", title="Session", url_path="session") 
+new_project = st.Page("pages/new_project.py", title="New Course", url_path="new")
+project = st.Page("pages/project_detail.py", title="Course", url_path="project")
+session = st.Page("pages/session_detail.py", title="Lesson", url_path="session") 
 settings = st.Page("pages/settings.py", title="Settings", url_path="settings")
 
 # Create navigation with all pages

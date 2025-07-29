@@ -70,7 +70,7 @@ with col3:
     st.markdown("""
     ### 👨‍🏫 AI Tutoring
     
-    Learn through conversation with an AI tutor that understands your progress. Each 30-minute session adapts to your understanding level.
+    Learn through conversation with an AI tutor that understands your progress. Each 30-minute lesson adapts to your understanding level.
     
     **Experience:**
     - Personalized explanations
@@ -95,7 +95,7 @@ with process_col1:
        Our AI analyzes the topic and creates your personalized curriculum
     
     3. **Interactive Learning**  
-       Engage with AI tutors in focused 30-minute sessions
+       Engage with AI tutors in focused 30-minute lessons
     
     4. **Track Progress**  
        Watch your knowledge graph light up as you master each concept
@@ -143,7 +143,7 @@ with benefit_col3:
 with benefit_col4:
     st.markdown("""
     ### 💰 Affordable
-    Pay only for OpenAI API usage - typically $0.05 per session
+    Pay only for OpenAI API usage - typically $0.05 per lesson
     """)
 
 # Final CTA

@@ -13,7 +13,7 @@ if 'new_project_view' not in st.session_state:
     st.session_state.new_project_view = 'input'  # 'input', 'clarification', 'confirmation'
 
 # Page header
-st.markdown("# 📚 New Learning Project")
+st.markdown("# 📚 New Learning Course")
 
 # Back button (always visible)
 # if st.button("← Back", key="back_button"):
@@ -173,7 +173,7 @@ elif st.session_state.new_project_view == 'clarification':
 
 elif st.session_state.new_project_view == 'confirmation':
     # Confirmation view
-    st.markdown("### Your personalized learning project is ready!")
+    st.markdown("### Your personalized learning course is ready!")
     
     col1, col2, col3 = st.columns([1, 3, 1])
     
@@ -195,12 +195,12 @@ elif st.session_state.new_project_view == 'confirmation':
         with col_a:
             st.markdown(f"**Study time:** {st.session_state.final_hours} hours")
         with col_b:
-            st.markdown(f"**Sessions:** ~{st.session_state.final_hours * 2} sessions of 30 minutes each")
+            st.markdown(f"**Lessons:** ~{st.session_state.final_hours * 2} lessons of 30 minutes each")
         
         st.markdown("---")
         
         st.markdown("### Ready to start?")
-        st.markdown("Clicking 'Start Deep Research' will begin creating your personalized curriculum. This process takes 10-30 minutes, but you can navigate to other projects while it completes.")
+        st.markdown("Clicking 'Start Deep Research' will begin creating your personalized curriculum. This process takes 10-30 minutes, but you can navigate to other courses while it completes.")
         
         # Action buttons
         col_1, col_2 = st.columns(2)

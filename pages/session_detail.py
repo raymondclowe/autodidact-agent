@@ -31,7 +31,7 @@ create_global_speech_component()
 # Show speech controls in header
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown("# 🎓 Learning Session")
+    st.markdown("# 🎓 Learning Lesson")
 with col2:
     show_speech_controls(location="header")
 
@@ -135,7 +135,7 @@ if not session_id and "selected_session_id" in st.session_state:
 
 if not project_id or not session_id:
     st.error("Invalid session URL!")
-    if st.button("Go to Projects"):
+    if st.button("Go to Courses"):
         st.switch_page("pages/home.py")
     st.stop()
 
@@ -143,8 +143,8 @@ if not project_id or not session_id:
 session_info = get_session_info(session_id)
 print(f"session_info: {session_info}")
 if not session_info:
-    st.error("Session not found!")
-    if st.button("Go to Project"):
+    st.error("Lesson not found!")
+    if st.button("Go to Course"):
         if project_id:
             st.session_state.selected_project_id = project_id
             st.switch_page("pages/project_detail.py")
@@ -169,10 +169,10 @@ is_completed = session_info["status"] == "completed"
 
 # Header
 if is_completed:
-    st.info(f"📚 **Completed Session** - Score: {int(session_info['final_score'] * 100)}%")
-st.markdown(f"## 🎓 Learning Session: {node_info['label']}")
+    st.info(f"📚 **Completed Lesson** - Score: {int(session_info['final_score'] * 100)}%")
+st.markdown(f"## 🎓 Learning Lesson: {node_info['label']}")
 
-@st.dialog("Session Info", width="large")
+@st.dialog("Lesson Info", width="large")
 def session_info_dialog():
     st.info(f"**Topic:** {node_info['label']}")
     st.markdown("### 📋 Learning Objectives")
@@ -247,18 +247,18 @@ if "current_phase" not in st.session_state:
 if "graph_state" not in st.session_state:
     st.session_state.graph_state = state
 
-# Session control buttons
+# Lesson control buttons
 with st.container():
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("🚪 Exit Session", type="secondary", use_container_width=True):
+        if st.button("🚪 Exit Lesson", type="secondary", use_container_width=True):
             st.session_state.selected_project_id = project_id
             st.switch_page("pages/project_detail.py")
 
     with col2:
         if not is_completed and st.session_state.get('graph_state'):
             # Only show early end if session is active and we've started teaching
-            if st.button("⏹️ End Session Early", type="secondary", use_container_width=True, disabled=(not st.session_state.graph_state.get('navigate_without_user_interaction'))):
+            if st.button("⏹️ End Lesson Early", type="secondary", use_container_width=True, disabled=(not st.session_state.graph_state.get('navigate_without_user_interaction'))):
                 # Set the force end flag and run the graph
                 st.session_state.graph_state['exit_requested'] = True
                 st.session_state.history.append({
@@ -270,7 +270,7 @@ with st.container():
 
     with col3:
         # add session info button here which opens a modal with the session info
-        if st.button("📚 Session Info", type="secondary", use_container_width=True):
+        if st.button("📚 Lesson Info", type="secondary", use_container_width=True):
             session_info_dialog()
 
 # Initialize chat history
@@ -359,7 +359,7 @@ if not is_completed:
                     with st.chat_message("assistant"):
                         create_speech_enabled_markdown(debug_result['message'], add_button=True)
                         st.balloons()
-                        st.success(f"🎉 **Debug Session Complete!** Score: {int(debug_result['score'] * 100)}%")
+                        st.success(f"🎉 **Debug Lesson Complete!** Score: {int(debug_result['score'] * 100)}%")
                         
                         # Show debug info if debug mode is enabled
                         if debug_result.get('debug_info'):
@@ -369,7 +369,7 @@ if not is_completed:
                         # Show completion buttons
                         col1, col2 = st.columns(2)
                         with col1:
-                            if st.button("✅ Back to Project", type="primary", use_container_width=True, key="debug_back"):
+                            if st.button("✅ Back to Course", type="primary", use_container_width=True, key="debug_back"):
                                 st.session_state.selected_project_id = session_info['project_id']
                                 st.switch_page("pages/project_detail.py")
                         with col2:
@@ -404,12 +404,12 @@ if not is_completed:
                         # Check if session is completed
                         if result['is_completed']:
                             st.balloons()
-                            st.success(f"🎉 **Session Complete!** Your score: {int(result['final_score'] * 100)}%")
+                            st.success(f"🎉 **Lesson Complete!** Your score: {int(result['final_score'] * 100)}%")
                             
                             # Show debug info if debug mode is enabled
                             from backend.debug_commands import is_debug_mode_enabled
                             if is_debug_mode_enabled():
-                                with st.expander("🔧 Normal Session Scoring Information", expanded=True):
+                                with st.expander("🔧 Normal Lesson Scoring Information", expanded=True):
                                     scoring_info = {
                                         'scoring_method': 'AI_LLM_GRADING',
                                         'final_score': result['final_score'],
@@ -423,7 +423,7 @@ if not is_completed:
                             # Show completion buttons
                             col1, col2 = st.columns(2)
                             with col1:
-                                if st.button("✅ Back to Project", type="primary", use_container_width=True, key="normal_back"):
+                                if st.button("✅ Back to Course", type="primary", use_container_width=True, key="normal_back"):
                                     st.session_state.selected_project_id = session_info['project_id']
                                     st.switch_page("pages/project_detail.py")
                             with col2:
@@ -440,8 +440,8 @@ if not is_completed:
                             st.error("⏳ Rate limit reached. Please wait a moment and try again.")
                             st.info("Consider upgrading your OpenAI plan for higher rate limits.")
                         elif result['error_type'] == 'recursion':
-                            st.error("⚠️ Session is taking too long. The conversation might be stuck in a loop.")
-                            st.info("Try refreshing the page or starting a new session.")
+                            st.error("⚠️ Lesson is taking too long. The conversation might be stuck in a loop.")
+                            st.info("Try refreshing the page or starting a new lesson.")
                         else:
                             st.error(f"❌ Error in tutor response: {result['error']}")
                             st.info("Try refreshing the page or starting a new session.")
