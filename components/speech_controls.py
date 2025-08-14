@@ -109,7 +109,7 @@ def add_speaker_button_to_text(text: str, container=None) -> None:
 
 def create_speech_enabled_markdown(text: str, add_button: bool = True, auto_speak: bool = None) -> None:
     """
-    Display markdown text with speech capabilities
+    Display markdown text with speech capabilities and MathJax support
     
     Args:
         text: Markdown text to display
@@ -124,6 +124,28 @@ def create_speech_enabled_markdown(text: str, add_button: bool = True, auto_spea
     
     # Display the text
     st.markdown(text)
+    
+    # Trigger MathJax reprocessing for dynamically added content
+    # This ensures mathematical formulas render properly in lessons
+    st.components.v1.html("""
+    <script>
+    // Wait for MathJax to be loaded, then trigger reprocessing
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise().catch(function (err) {
+            console.log('MathJax typeset error:', err.message);
+        });
+    } else {
+        // If MathJax isn't loaded yet, wait a bit and try again
+        setTimeout(function() {
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise().catch(function (err) {
+                    console.log('MathJax typeset error:', err.message);
+                });
+            }
+        }, 100);
+    }
+    </script>
+    """, height=1)
     
     # Add speech functionality
     if add_button or auto_speak:
