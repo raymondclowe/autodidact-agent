@@ -206,23 +206,11 @@ def wrap_jsxgraph_html(content: str) -> str:
 """
 
 
-# Template examples for common STEM topics
+# Template examples - kept minimal as requested
 JSXGRAPH_TEMPLATES = {
-    "pythagorean_theorem": {
-        "description": "Right triangle demonstrating Pythagorean theorem",
+    "triangle": {
+        "description": "Interactive right triangle with draggable vertices",
         "code": lambda graph_id: create_triangle_diagram(graph_id, (0, 3), (0, 0), (4, 0))
-    },
-    "quadratic_function": {
-        "description": "Parabola y = x²",
-        "code": lambda graph_id: create_function_plot(graph_id, "x*x", -5, 5)
-    },
-    "unit_circle": {
-        "description": "Unit circle with center and radius",
-        "code": lambda graph_id: create_circle_diagram(graph_id, (0, 0), 1)
-    },
-    "sine_wave": {
-        "description": "Sine function y = sin(x)",
-        "code": lambda graph_id: create_function_plot(graph_id, "Math.sin(x)", -6, 6)
     }
 }
 
@@ -237,17 +225,57 @@ def get_available_templates() -> dict:
     return {name: template["description"] for name, template in JSXGRAPH_TEMPLATES.items()}
 
 
-def create_template_diagram(template_name: str, graph_id: str) -> str:
+def create_custom_diagram(graph_id: str, jsxgraph_code: str) -> str:
     """
-    Create a diagram from a predefined template.
+    Create a custom JSXGraph diagram from raw JavaScript code.
     
     Args:
-        template_name: Name of the template to use
         graph_id: Unique ID for the graph
+        jsxgraph_code: Raw JSXGraph JavaScript code
         
     Returns:
-        Complete JSXGraph HTML for the template
+        Complete JSXGraph HTML with custom code
     """
+    container = create_jsxgraph_container(graph_id)
+    
+    # Replace 'board' references with the specific board ID
+    processed_code = jsxgraph_code.replace('board', f'board_{graph_id}')
+    processed_code = processed_code.replace(f'board_{graph_id}_', 'board_')  # Fix over-replacement
+    
+    custom_code = f"""
+<script>
+var board_{graph_id} = JXG.JSXGraph.initBoard('{graph_id}', {{
+    boundingbox: [-6, 6, 6, -6],
+    axis: false,
+    grid: false,
+    showNavigation: true,
+    showZoom: true
+}});
+
+{processed_code}
+</script>
+"""
+    
+    return container + custom_code
+
+
+def create_template_diagram(template_name: str, graph_id: str, custom_code: str = None) -> str:
+    """
+    Create a diagram from a predefined template or custom code.
+    
+    Args:
+        template_name: Name of the template to use, or "custom" for custom code
+        graph_id: Unique ID for the graph
+        custom_code: JSXGraph JavaScript code (required when template_name is "custom")
+        
+    Returns:
+        Complete JSXGraph HTML for the template or custom diagram
+    """
+    if template_name == "custom":
+        if not custom_code:
+            raise ValueError("Custom JSXGraph code is required when using 'custom' template")
+        return wrap_jsxgraph_html(create_custom_diagram(graph_id, custom_code))
+    
     if template_name not in JSXGRAPH_TEMPLATES:
         raise ValueError(f"Template '{template_name}' not found. Available: {list(JSXGRAPH_TEMPLATES.keys())}")
     

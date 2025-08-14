@@ -178,6 +178,7 @@ def _process_jsxgraph_tags(text: str) -> tuple[str, str]:
     
     Args:
         text: Text potentially containing <jsxgraph>template:id</jsxgraph> tags
+              and custom JSXGraph code blocks
         
     Returns:
         Tuple of (processed_text, jsxgraph_html)
@@ -201,17 +202,30 @@ def _process_jsxgraph_tags(text: str) -> tuple[str, str]:
         graph_id = graph_id.strip()
         
         try:
-            # Create the diagram
-            diagram_html = create_template_diagram(template_name, graph_id)
+            # Handle custom diagrams
+            if template_name == "custom":
+                # Look for JavaScript code after the tag
+                custom_code = _extract_custom_jsxgraph_code(text, template_name, graph_id)
+                diagram_html = create_template_diagram(template_name, graph_id, custom_code)
+                
+                # Remove both the tag and the custom code from the text
+                tag_and_code_pattern = _build_custom_removal_pattern(template_name, graph_id, custom_code)
+                processed_text = re.sub(tag_and_code_pattern, 
+                                      f"*[Interactive diagram: custom - {graph_id}]*", 
+                                      processed_text, flags=re.DOTALL)
+            else:
+                # Handle template diagrams
+                diagram_html = create_template_diagram(template_name, graph_id)
+                
+                # Replace the tag with a placeholder
+                tag_pattern = f'<jsxgraph>{re.escape(template_name)}:{re.escape(graph_id)}</jsxgraph>'
+                replacement = f"*[Interactive diagram: {template_name} - {graph_id}]*"
+                processed_text = re.sub(tag_pattern, replacement, processed_text)
+            
             diagram_htmls.append(diagram_html)
             
-            # Replace the tag with a placeholder
-            tag_pattern = f'<jsxgraph>{re.escape(template_name)}:{re.escape(graph_id)}</jsxgraph>'
-            replacement = f"*[Interactive diagram: {template_name} - {graph_id}]*"
-            processed_text = re.sub(tag_pattern, replacement, processed_text)
-            
         except Exception as e:
-            # If template fails, show error message
+            # If diagram fails, show error message
             error_msg = f"*[Diagram error: {template_name} - {str(e)}]*"
             tag_pattern = f'<jsxgraph>{re.escape(template_name)}:{re.escape(graph_id)}</jsxgraph>'
             processed_text = re.sub(tag_pattern, error_msg, processed_text)
@@ -222,6 +236,53 @@ def _process_jsxgraph_tags(text: str) -> tuple[str, str]:
         combined_html = "\n".join(diagram_htmls)
     
     return processed_text, combined_html
+
+
+def _extract_custom_jsxgraph_code(text: str, template_name: str, graph_id: str) -> str:
+    """
+    Extract custom JSXGraph JavaScript code following a custom tag.
+    
+    Args:
+        text: Full text containing the tag and code
+        template_name: Should be "custom"
+        graph_id: Graph identifier
+        
+    Returns:
+        JavaScript code string
+    """
+    import re
+    
+    # Pattern to find the tag and capture code in following ```javascript or ``` block
+    tag_pattern = f'<jsxgraph>{re.escape(template_name)}:{re.escape(graph_id)}</jsxgraph>'
+    
+    # Look for JavaScript code block after the tag
+    code_pattern = tag_pattern + r'\s*```(?:javascript)?\s*(.*?)\s*```'
+    
+    match = re.search(code_pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    
+    # If no code block found, throw error
+    raise ValueError(f"No JavaScript code block found after custom JSXGraph tag for {graph_id}")
+
+
+def _build_custom_removal_pattern(template_name: str, graph_id: str, custom_code: str) -> str:
+    """
+    Build regex pattern to remove both tag and custom code from text.
+    
+    Args:
+        template_name: Template name (should be "custom")
+        graph_id: Graph identifier
+        custom_code: The extracted custom code
+        
+    Returns:
+        Regex pattern string
+    """
+    import re
+    
+    tag_pattern = f'<jsxgraph>{re.escape(template_name)}:{re.escape(graph_id)}</jsxgraph>'
+    # Pattern to match the tag and the following code block
+    return tag_pattern + r'\s*```(?:javascript)?\s*.*?\s*```'
 
 
 def create_speech_enabled_write(text: str, add_button: bool = True, auto_speak: bool = None) -> None:

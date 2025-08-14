@@ -21,7 +21,7 @@ def test_jsxgraph_templates():
     
     # Test template creation
     try:
-        diagram_html = create_template_diagram("pythagorean_theorem", "test_triangle")
+        diagram_html = create_template_diagram("triangle", "test_triangle")
         assert "<div id=\"test_triangle\"" in diagram_html
         assert "JXG.JSXGraph.initBoard" in diagram_html
         print("✅ Template diagram creation works")
@@ -29,11 +29,13 @@ def test_jsxgraph_templates():
         print(f"❌ Template creation failed: {e}")
         return False
     
-    # Test custom diagram
+    # Test custom diagram creation with template system
     try:
-        custom_html = create_triangle_diagram("custom_triangle")
-        assert "custom_triangle" in custom_html
-        print("✅ Custom diagram creation works")
+        custom_code = "var A = board.create('point', [1, 2], {name:'A'});"
+        custom_html = create_template_diagram("custom", "custom_test", custom_code)
+        assert "custom_test" in custom_html
+        assert "var A = board_custom_test.create" in custom_html
+        print("✅ Custom JSXGraph code generation works")
     except Exception as e:
         print(f"❌ Custom diagram creation failed: {e}")
         return False
@@ -103,12 +105,9 @@ def test_jsxgraph_processing():
     test_text = """
     Let's learn about triangles!
     
-    <jsxgraph>pythagorean_theorem:demo1</jsxgraph>
+    <jsxgraph>triangle:demo1</jsxgraph>
     
-    As you can see in the diagram above, this demonstrates the relationship a² + b² = c².
-    
-    Here's another example:
-    <jsxgraph>unit_circle:demo2</jsxgraph>
+    As you can see in the diagram above, this demonstrates triangle geometry.
     """
     
     try:
@@ -116,13 +115,11 @@ def test_jsxgraph_processing():
         
         # Check that tags were replaced
         assert "<jsxgraph>" not in processed_text, "JSXGraph tags should be removed from text"
-        assert "Interactive diagram: pythagorean_theorem - demo1" in processed_text
-        assert "Interactive diagram: unit_circle - demo2" in processed_text
+        assert "Interactive diagram: triangle - demo1" in processed_text
         
         # Check that HTML was generated
         assert jsxgraph_html, "JSXGraph HTML should be generated"
         assert "demo1" in jsxgraph_html, "demo1 diagram should be in HTML"
-        assert "demo2" in jsxgraph_html, "demo2 diagram should be in HTML"
         
         print("✅ JSXGraph tag processing works correctly")
         return True
