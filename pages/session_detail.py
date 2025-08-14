@@ -15,6 +15,7 @@ from backend.graph_v05 import (
 )
 from backend.debug_commands import handle_debug_command
 from components.speech_controls import show_speech_controls, create_global_speech_component, create_speech_enabled_markdown
+from components.image_display import render_content_with_images
 from utils.speech_utils import initialize_speech_state
 
 from pathlib import Path
@@ -27,6 +28,25 @@ from typing import Any, Dict
 # Initialize speech functionality
 initialize_speech_state()
 create_global_speech_component()
+
+def display_assistant_message(content: str, context: str = ""):
+    """Display assistant message with speech and image support"""
+    try:
+        # First check if there are image requests in the content
+        from components.image_display import process_image_markup
+        cleaned_content, image_requests = process_image_markup(content)
+        
+        if image_requests:
+            # If there are images, use the full image rendering
+            render_content_with_images(content, context, auto_search=True)
+        else:
+            # No images, use standard speech-enabled markdown
+            create_speech_enabled_markdown(content, add_button=True)
+            
+    except Exception as e:
+        logging.error(f"Error in display_assistant_message: {e}")
+        # Fallback to standard display
+        create_speech_enabled_markdown(content, add_button=True)
 
 # Show speech controls in header
 col1, col2 = st.columns([3, 1])
@@ -296,8 +316,8 @@ if "history" not in st.session_state:
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
         if message["role"] == "assistant":
-            # Use speech-enabled markdown for assistant messages
-            create_speech_enabled_markdown(message["content"], add_button=True)
+            # Use enhanced display with speech and image support
+            display_assistant_message(message["content"], context=node_info.get('label', ''))
         else:
             # Regular markdown for user messages
             st.markdown(message["content"])
@@ -318,7 +338,7 @@ if not is_completed and len(st.session_state.history) == 0:
                 for msg in new_messages:
                     if msg["role"] == "assistant":
                         print(f"msg to be shown: {msg['content']}")
-                        create_speech_enabled_markdown(msg["content"], add_button=True)
+                        display_assistant_message(msg["content"], context=node_info.get('label', ''))
             else:
                 st.error(f"❌ Failed to start session: {result['error']} {result}")
 
@@ -413,7 +433,7 @@ if not is_completed:
                         for msg in new_messages:
                             if msg["role"] == "assistant":
                                 print(f"msg to be shown: {msg['content']}")
-                                create_speech_enabled_markdown(msg["content"], add_button=True)
+                                display_assistant_message(msg["content"], context=node_info.get('label', ''))
                         print(f"result: {result}")
                         print(f"st.session_state.history: {st.session_state.history}")
                         # Check if session is completed
