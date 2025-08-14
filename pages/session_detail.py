@@ -44,7 +44,7 @@ def display_assistant_message(content: str, context: str = ""):
             create_speech_enabled_markdown(content, add_button=True)
             
     except Exception as e:
-        print(f"Error in display_assistant_message: {e}")
+        logging.error(f"Error in display_assistant_message: {e}")
         # Fallback to standard display
         create_speech_enabled_markdown(content, add_button=True)
 
