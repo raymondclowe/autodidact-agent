@@ -26,7 +26,8 @@ def create_demo_html():
             image_url = "https://via.placeholder.com/400x300?text=Educational+Image"
             image_description = "Educational diagram placeholder"
             
-    except:
+    except Exception as e:
+        print(f"Error fetching demo image: {e}")
         image_url = "https://via.placeholder.com/400x300?text=Educational+Image"
         image_description = "Educational diagram placeholder"
     
