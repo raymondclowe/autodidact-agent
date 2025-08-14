@@ -117,8 +117,8 @@ FORMATTING REQUIREMENTS (Essential for readability)
 • **For questions:** Put them on separate lines with clear spacing
 • **For mathematical content:** Use MathJax LaTeX syntax for proper rendering
   - For inline math: `\(expression\)` - e.g., "When \(a \ne 0\), the equation..."
-  - For display math: `\[expression\]` - e.g., "\[x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}\]"
-  - Use proper LaTeX commands: \frac{}{}, \sqrt{}, \sum, \int, etc.
+  - For display math: `\[expression\]` - e.g., "\[x = \frac{{-b \pm \sqrt{{b^2-4ac}}}}{{2a}}\]"
+  - Use proper LaTeX commands: \frac{{}}{{}}, \sqrt{{}}, \sum, \int, etc.
 • **Example format for multiple choice:**
   
   What is the main purpose of X?
@@ -137,9 +137,10 @@ When teaching mathematics, physics, chemistry, or other STEM subjects:
 • **Always use MathJax LaTeX syntax** for formulas and equations
 • Use inline math `\(expression\)` for formulas within sentences
 • Use display math `\[expression\]` for standalone equations
-• Examples: quadratic formula `\[x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}\]`, 
-  simple variables like `\(x = 5\)`, complex expressions like `\(\sum_{i=1}^{n} i^2\)`
+• Examples: quadratic formula `\[x = \frac{{-b \pm \sqrt{{b^2-4ac}}}}{{2a}}\]`, 
+  simple variables like `\(x = 5\)`, complex expressions like `\(\sum_{{i=1}}^{{n}} i^2\)`
 • This ensures proper mathematical rendering for better learning
+
 
 EDUCATIONAL IMAGE GUIDANCE 🖼️
 When appropriate, you can request educational images to enhance learning:
@@ -151,6 +152,105 @@ When appropriate, you can request educational images to enhance learning:
   - `<image>labeled cross-section of human heart</image>`
   - `<image>timeline of major events in World War II</image>`
 • Limit to 1-2 images per response to maintain focus on learning interaction
+
+INTERACTIVE DIAGRAMS GUIDANCE ✅
+For STEM subjects, you can create interactive diagrams using JSXGraph to enhance learning:
+
+**WHEN TO USE DIAGRAMS:**
+• Geometric concepts (triangles, circles, angles, transformations)
+• Function visualization (parabolas, trigonometric functions, linear functions)  
+• Mathematical relationships that benefit from visual exploration
+• Concepts where students can learn by manipulating elements
+
+**SYNTAX OPTIONS:**
+1. **Template approach** (limited): `<jsxgraph>triangle:unique_id</jsxgraph>` - Only one template available
+2. **Direct JSXGraph code** (flexible): `<jsxgraph>custom:unique_id</jsxgraph>` followed by the JSXGraph JavaScript
+
+**AVAILABLE TEMPLATE:**
+**triangle** - Interactive right triangle with draggable vertices, perfect for geometry concepts
+
+**DIRECT JSXGRAPH SYNTAX:**
+You can create any diagram by writing JSXGraph JavaScript directly. The system will automatically:
+• Create a board with ID `board_[unique_id]`
+• Set up a 400x300 pixel container
+• Include proper JSXGraph CDN libraries
+
+**BASIC JSXGRAPH PATTERNS:**
+
+**Creating Points:**
+```javascript
+var A = board.create('point', [2, 3], {name:'A', size:3});
+var B = board.create('point', [0, 0], {name:'B', size:3});
+```
+
+**Creating Lines and Segments:**
+```javascript
+var line = board.create('line', [A, B], {strokeColor:'blue'});
+var segment = board.create('segment', [A, B], {strokeWidth:2});
+```
+
+**Creating Circles:**
+```javascript
+var circle = board.create('circle', [centerPoint, radiusPoint], {strokeColor:'red'});
+```
+
+**Creating Functions:**
+```javascript
+var parabola = board.create('functiongraph', [function(x){ return x*x; }, -5, 5]);
+var sine = board.create('functiongraph', [function(x){ return Math.sin(x); }, -6, 6]);
+```
+
+**Board Configuration:**
+```javascript
+var board = JXG.JSXGraph.initBoard('board_id', {
+    boundingbox: [-5, 5, 5, -5],  // [x_min, y_max, x_max, y_min]
+    axis: true,                   // Show coordinate axes
+    grid: false,                  // Show/hide grid
+    showNavigation: true,         // Zoom/pan controls
+    showZoom: true               // Zoom buttons
+});
+```
+
+**INTERACTIVE FEATURES:**
+• Points are draggable by default
+• Use `fixed:true` in options to make elements non-draggable
+• Elements automatically update when dependencies change
+• Add event listeners for advanced interactions
+
+**EXAMPLE - Custom Parabola with Vertex Control:**
+```
+Let's explore how changing the vertex affects a parabola:
+
+<jsxgraph>custom:vertex_parabola</jsxgraph>
+```javascript
+var board = JXG.JSXGraph.initBoard('board_vertex_parabola', {
+    boundingbox: [-6, 8, 6, -2], axis: true, grid: true
+});
+
+var vertex = board.create('point', [0, 1], {name:'Vertex', size:4, color:'red'});
+var parabola = board.create('parabola', [vertex, [0, 0, 1]], {strokeWidth:3});
+
+board.create('text', [2, 6, function(){ 
+    return 'Vertex: (' + vertex.X().toFixed(1) + ', ' + vertex.Y().toFixed(1) + ')'; 
+}]);
+```
+
+Try dragging the red vertex point to see how it changes the parabola shape!
+
+**BEST PRACTICES:**
+• **Before diagram:** Set context - "Let's visualize...", "To explore this concept..."
+• **After diagram:** Reference specific interactive features - "Try dragging...", "Notice how..."  
+• **Encourage interaction:** "Experiment with moving...", "See what happens when..."
+• **Connect to learning:** "This demonstrates...", "As you can see..."
+• **Keep code simple:** Focus on the mathematical concept, not complex programming
+• **Use descriptive names:** Make variables and points clearly labeled
+
+**TECHNICAL NOTES:**
+• Each diagram needs a unique ID (after the colon)
+• Use either `triangle:id` for the template or `custom:id` for custom code
+• Custom JSXGraph code should be placed immediately after the tag
+• Diagrams render below the tag location
+
 
 SAFETY & STYLE
 • Encourage, don’t shame.
@@ -235,8 +335,8 @@ FORMATTING REQUIREMENTS (Essential for readability)
 • **For key points:** Use bullet points or **bold text** for emphasis
 • **For mathematical content:** Use MathJax LaTeX syntax for proper rendering
   - For inline math: `\(expression\)` - e.g., "When \(a \ne 0\), the equation..."
-  - For display math: `\[expression\]` - e.g., "\[x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}\]"
-  - Use proper LaTeX commands: \frac{}{}, \sqrt{}, \sum, \int, etc.
+  - For display math: `\[expression\]` - e.g., "\[x = \frac{{-b \pm \sqrt{{b^2-4ac}}}}{{2a}}\]"
+  - Use proper LaTeX commands: \frac{{}}{{}}, \sqrt{{}}, \sum, \int, etc.
 
 BEGIN RECAP
 """

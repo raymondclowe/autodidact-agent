@@ -190,7 +190,22 @@ is_completed = session_info["status"] == "completed"
 # Header
 if is_completed:
     st.info(f"📚 **Completed Lesson** - Score: {int(session_info['final_score'] * 100)}%")
-st.markdown(f"## 🎓 Learning Lesson: {node_info['label']}")
+# Session info display with model capability warning
+session_info_col1, session_info_col2 = st.columns([2, 1])
+with session_info_col1:
+    st.markdown(f"## 🎓 Learning Lesson: {node_info['label']}")
+    
+with session_info_col2:
+    # Check for model capability warnings
+    from utils.providers import get_model_capability_warning, get_model_for_task
+    try:
+        current_model = get_model_for_task('chat')
+        warning = get_model_capability_warning(current_model)
+        if warning:
+            st.warning(warning)
+    except Exception as e:
+        # Don't fail if model checking fails
+        pass
 
 @st.dialog("Lesson Info", width="large")
 def session_info_dialog():

@@ -294,3 +294,63 @@ def list_available_models(provider: str = None) -> Dict:
     
     config = get_provider_config(provider)
     return {task: model for task, model in config.items() if task != "base_url"}
+
+
+def is_diagram_capable_model(model: str) -> bool:
+    """
+    Check if a model is capable of generating quality diagrams.
+    
+    Args:
+        model: Model name to check
+        
+    Returns:
+        True if model supports good diagram generation, False otherwise
+    """
+    # High-capability models that support good diagram generation
+    diagram_capable_models = {
+        # OpenAI models
+        "gpt-5", "gpt-4o", "gpt-4-turbo", "gpt-4",
+        # Anthropic Claude models  
+        "anthropic/claude-opus-4.1", "anthropic/claude-3.5-sonnet", "anthropic/claude-3-opus",
+        # Other high-capability models
+        "openai/o1", "openai/o1-preview"
+    }
+    
+    # Lower capability models that may struggle with diagrams
+    lower_capability_models = {
+        "gpt-4o-mini", "gpt-3.5-turbo", "anthropic/claude-3.5-haiku", 
+        "anthropic/claude-3-haiku", "gpt-3.5-turbo-instruct"
+    }
+    
+    # Check exact match first
+    if model in diagram_capable_models:
+        return True
+    if model in lower_capability_models:
+        return False
+    
+    # Check partial match for versioned models
+    for capable_model in diagram_capable_models:
+        if model.startswith(capable_model + "-"):
+            return True
+    
+    # Default to False for unknown models
+    return False
+
+
+def get_model_capability_warning(model: str) -> str:
+    """
+    Get warning message for models that may not handle diagrams well.
+    
+    Args:
+        model: Model name to check
+        
+    Returns:
+        Warning message if model has limited diagram capabilities, empty string otherwise
+    """
+    if not is_diagram_capable_model(model):
+        return (
+            f"⚠️ **Warning**: The model '{model}' may have limited capabilities for generating "
+            f"interactive diagrams and complex mathematical visualizations. For best results with "
+            f"STEM subjects, consider using a more capable model like GPT-5 or Claude Opus 4.1."
+        )
+    return ""
