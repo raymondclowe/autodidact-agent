@@ -10,11 +10,64 @@ from utils.tavily_integration import ImageResult
 
 logger = logging.getLogger('autodidact.image_component')
 
+def cache_displayed_image(image_result: ImageResult, context: str = "") -> None:
+    """Cache a displayed image in the session state for AI context awareness"""
+    try:
+        if hasattr(st, 'session_state') and 'graph_state' in st.session_state:
+            # Get current displayed images or initialize empty list
+            displayed_images = st.session_state.graph_state.get('displayed_images', [])
+            
+            # Create image cache entry
+            image_cache_entry = {
+                'url': image_result.url,
+                'description': image_result.description or "Educational image",
+                'context': context,
+                'title': getattr(image_result, 'title', None),
+                'source': getattr(image_result, 'source', None)
+            }
+            
+            # Check if this image is already cached (avoid duplicates)
+            for existing in displayed_images:
+                if existing.get('url') == image_result.url:
+                    return
+            
+            # Add to cache
+            displayed_images.append(image_cache_entry)
+            st.session_state.graph_state['displayed_images'] = displayed_images
+            
+            logger.debug(f"Cached image for AI context: {image_result.description}")
+            
+    except Exception as e:
+        logger.warning(f"Failed to cache displayed image: {e}")
+
+def get_images_context_for_ai() -> str:
+    """Get context about images currently visible to the user for AI prompts"""
+    try:
+        if hasattr(st, 'session_state') and 'graph_state' in st.session_state:
+            displayed_images = st.session_state.graph_state.get('displayed_images', [])
+            
+            if not displayed_images:
+                return ""
+            
+            context_parts = []
+            for i, img in enumerate(displayed_images[-3:], 1):  # Last 3 images only
+                desc = img.get('description', 'Educational image')
+                context = img.get('context', '')
+                context_parts.append(f"{i}. {desc}" + (f" ({context})" if context else ""))
+            
+            return f"\n\nIMAGES CURRENTLY VISIBLE TO STUDENT:\n" + "\n".join(context_parts)
+        
+    except Exception as e:
+        logger.warning(f"Failed to get images context: {e}")
+    
+    return ""
+
 def display_educational_image(
     image_result: ImageResult, 
     caption: Optional[str] = None,
     width: Optional[int] = None,
-    use_column_width: bool = True
+    use_container_width: bool = True,
+    context: str = ""
 ) -> None:
     """
     Display an educational image from Tavily search result
@@ -23,7 +76,8 @@ def display_educational_image(
         image_result: ImageResult object from Tavily search
         caption: Optional custom caption (uses description if not provided)
         width: Optional width in pixels
-        use_column_width: Whether to use column width for responsive display
+        use_container_width: Whether to use container width for responsive display
+        context: Context about when/why this image is shown (for AI awareness)
     """
     try:
         if not image_result or not image_result.url:
@@ -38,12 +92,15 @@ def display_educational_image(
             image_result.url,
             caption=display_caption,
             width=width,
-            use_column_width=use_column_width
+            use_container_width=use_container_width
         )
         
         # Add source attribution if available
         if image_result.source:
             st.caption(f"Source: {image_result.source}")
+        
+        # Cache this image for AI context awareness
+        cache_displayed_image(image_result, context)
             
         logger.debug(f"Displayed educational image: {image_result.url}")
         
@@ -166,7 +223,7 @@ def render_content_with_images(
                     
                     if image_result:
                         st.markdown(f"**{image_request.title()}**")
-                        display_educational_image(image_result)
+                        display_educational_image(image_result, context=f"Teaching context: {context}")
                     else:
                         st.info(f"📷 No suitable image found for: {image_request}")
                         

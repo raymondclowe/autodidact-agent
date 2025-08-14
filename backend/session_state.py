@@ -82,6 +82,9 @@ class SessionState(TypedDict, total=False):
     exit_requested: bool          # set by UI to trigger early exit
     history: List[Dict[str, str]] # chat transcript ({role, content})
     
+    # Image cache for AI context awareness
+    displayed_images: List[Dict[str, str]]  # List of {url, description, context} for images shown to user
+    
     # Quiz tracking
     final_test_questions: List[str]
     final_test_answers: List[str]
@@ -137,6 +140,9 @@ def create_initial_state(
         "exit_requested": False,
 
         "history": [],
+        
+        # Image cache
+        "displayed_images": [],
         
         # Quiz tracking
         "final_test_questions": [],

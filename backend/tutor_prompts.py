@@ -17,6 +17,33 @@ try:
 except ImportError:  # pragma: no cover
     jsonschema = None  # falls back to no‑validation mode
 
+def get_images_context_for_ai() -> str:
+    """
+    Get context about images currently visible to the user for AI prompts
+    This function gets the context from the session state if available
+    """
+    try:
+        import streamlit as st
+        if hasattr(st, 'session_state') and 'graph_state' in st.session_state:
+            displayed_images = st.session_state.graph_state.get('displayed_images', [])
+            
+            if not displayed_images:
+                return ""
+            
+            context_parts = []
+            for i, img in enumerate(displayed_images[-3:], 1):  # Last 3 images only
+                desc = img.get('description', 'Educational image')
+                context = img.get('context', '')
+                context_parts.append(f"{i}. {desc}" + (f" ({context})" if context else ""))
+            
+            return f"\n\nIMAGES CURRENTLY VISIBLE TO STUDENT:\n" + "\n".join(context_parts)
+        
+    except Exception:
+        # If streamlit not available or other issues, return empty context
+        pass
+    
+    return ""
+
 # ---------------------------------------------------------------------------
 # Reference‑list helper
 # ---------------------------------------------------------------------------
@@ -259,6 +286,8 @@ SAFETY & STYLE
 • Be concrete and honest about limitations
 • If they ask homework questions, help them work through the process, don't solve it for them
 
+{VISIBLE_IMAGES_CONTEXT}
+
 BEGIN TUTORING
 """
 
@@ -386,6 +415,9 @@ def format_teaching_prompt(
     learner_profile_context: str = "",
 ) -> str:
     """Fill the TEACHING prompt with runtime values."""
+    # Get images context for AI awareness
+    images_context = get_images_context_for_ai()
+    
     return TEACHING_PROMPT_TEMPLATE.format(
         OBJ_ID=obj_id,
         OBJ_LABEL=obj_label,
@@ -393,6 +425,7 @@ def format_teaching_prompt(
         REMAINING_OBJS="; ".join(remaining),
         REF_LIST_BULLETS=build_ref_list(refs),
         LEARNER_PROFILE_CONTEXT=learner_profile_context,
+        VISIBLE_IMAGES_CONTEXT=images_context,
     )
 
 def format_recap_prompt(
