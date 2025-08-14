@@ -109,10 +109,10 @@ def add_speaker_button_to_text(text: str, container=None) -> None:
 
 def create_speech_enabled_markdown(text: str, add_button: bool = True, auto_speak: bool = None) -> None:
     """
-    Display markdown text with speech capabilities and MathJax support
+    Display markdown text with speech capabilities, MathJax support, and JSXGraph diagrams
     
     Args:
-        text: Markdown text to display
+        text: Markdown text to display (may contain JSXGraph tags)
         add_button: Whether to add a speaker button
         auto_speak: Override auto_speak setting
     """
@@ -122,8 +122,15 @@ def create_speech_enabled_markdown(text: str, add_button: bool = True, auto_spea
     if auto_speak is None:
         auto_speak = st.session_state.get('auto_speak', False)
     
-    # Display the text
-    st.markdown(text)
+    # Process JSXGraph tags before displaying
+    processed_text, jsxgraph_html = _process_jsxgraph_tags(text)
+    
+    # Display the processed text
+    st.markdown(processed_text)
+    
+    # Render any JSXGraph diagrams
+    if jsxgraph_html:
+        st.components.v1.html(jsxgraph_html, height=400, scrolling=True)
     
     # Trigger MathJax reprocessing for dynamically added content
     # This ensures mathematical formulas render properly in lessons
@@ -155,14 +162,66 @@ def create_speech_enabled_markdown(text: str, add_button: bool = True, auto_spea
         
         # Add auto-speak component
         if auto_speak:
-            speech_html += create_tts_component(text, auto_trigger=True)
+            speech_html += create_tts_component(processed_text, auto_trigger=True)
         
         # Add speaker button
         if add_button:
-            speech_html += create_speaker_button_html(text)
+            speech_html += create_speaker_button_html(processed_text)
         
         if speech_html:
             st.components.v1.html(speech_html, height=30)
+
+
+def _process_jsxgraph_tags(text: str) -> tuple[str, str]:
+    """
+    Process JSXGraph tags in text and return cleaned text and HTML for diagrams.
+    
+    Args:
+        text: Text potentially containing <jsxgraph>template:id</jsxgraph> tags
+        
+    Returns:
+        Tuple of (processed_text, jsxgraph_html)
+    """
+    import re
+    from components.jsxgraph_utils import create_template_diagram, wrap_jsxgraph_html
+    
+    # Find all JSXGraph tags
+    jsxgraph_pattern = r'<jsxgraph>([^:]+):([^<]+)</jsxgraph>'
+    matches = re.findall(jsxgraph_pattern, text)
+    
+    if not matches:
+        return text, ""
+    
+    # Remove JSXGraph tags from text and collect diagram HTML
+    processed_text = text
+    diagram_htmls = []
+    
+    for template_name, graph_id in matches:
+        template_name = template_name.strip()
+        graph_id = graph_id.strip()
+        
+        try:
+            # Create the diagram
+            diagram_html = create_template_diagram(template_name, graph_id)
+            diagram_htmls.append(diagram_html)
+            
+            # Replace the tag with a placeholder
+            tag_pattern = f'<jsxgraph>{re.escape(template_name)}:{re.escape(graph_id)}</jsxgraph>'
+            replacement = f"*[Interactive diagram: {template_name} - {graph_id}]*"
+            processed_text = re.sub(tag_pattern, replacement, processed_text)
+            
+        except Exception as e:
+            # If template fails, show error message
+            error_msg = f"*[Diagram error: {template_name} - {str(e)}]*"
+            tag_pattern = f'<jsxgraph>{re.escape(template_name)}:{re.escape(graph_id)}</jsxgraph>'
+            processed_text = re.sub(tag_pattern, error_msg, processed_text)
+    
+    # Combine all diagram HTML
+    combined_html = ""
+    if diagram_htmls:
+        combined_html = "\n".join(diagram_htmls)
+    
+    return processed_text, combined_html
 
 
 def create_speech_enabled_write(text: str, add_button: bool = True, auto_speak: bool = None) -> None:
