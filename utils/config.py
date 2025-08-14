@@ -118,20 +118,22 @@ PROVIDER_MODELS = {
     "openai": {
         "deep_research": "o4-mini-deep-research-2025-06-26",
         # "deep_research_alt": "o3-deep-research",  # Higher cost alternative
-        "chat": "gpt-4o-mini",
+        "chat": "gpt-5",  # Updated for better diagram generation
         "base_url": None,  # Use default OpenAI base URL
         "token_limits": {
             "o4-mini-deep-research-2025-06-26": 160000,  # 80% of 200k published max
-            "gpt-4o-mini": 102400  # 80% of 128k published max
+            "gpt-5": 160000,  # GPT-5 context window
+            "gpt-4o-mini": 102400  # 80% of 128k published max (legacy)
         }
     },
     "openrouter": {
         "deep_research": "perplexity/sonar-deep-research",  # Perplexity Sonar Pro Deep Research
-        "chat": "anthropic/claude-3.5-haiku",
+        "chat": "anthropic/claude-opus-4.1",  # Updated for better diagram generation
         "base_url": "https://openrouter.ai/api/v1",
         "token_limits": {
             "perplexity/sonar-deep-research": 102400,  # 80% of 128k published max (conservative)
-            "anthropic/claude-3.5-haiku": 160000  # 80% of 200k published max
+            "anthropic/claude-opus-4.1": 160000,  # 80% of 200k published max
+            "anthropic/claude-3.5-haiku": 160000  # 80% of 200k published max (legacy)
         }
     }
 }
