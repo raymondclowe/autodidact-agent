@@ -4,10 +4,13 @@ Provides functionality to search for relevant educational images using Tavily AP
 """
 
 import os
-import logging
 import requests
-from typing import Dict, List, Optional, Any
+import json
+import logging
+from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
+
+from utils.config import load_tavily_api_key
 
 logger = logging.getLogger('autodidact.tavily')
 
@@ -23,9 +26,9 @@ class TavilyImageSearch:
     """Tavily API client for educational image search"""
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv('COPILOT_TAVILY_API_KEY')
+        self.api_key = api_key or load_tavily_api_key()
         if not self.api_key:
-            raise ValueError("Tavily API key not found. Set COPILOT_TAVILY_API_KEY environment variable.")
+            raise ValueError("Tavily API key not found. Configure it in Settings or set COPILOT_TAVILY_API_KEY environment variable.")
         
         self.base_url = "https://api.tavily.com"
         self.session = requests.Session()

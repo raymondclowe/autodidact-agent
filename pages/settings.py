@@ -6,7 +6,7 @@ Manage API keys and provider configuration
 import streamlit as st
 from utils.config import (
     load_api_key, save_api_key, CONFIG_FILE, get_current_provider,
-    set_current_provider, SUPPORTED_PROVIDERS
+    set_current_provider, SUPPORTED_PROVIDERS, load_tavily_api_key, save_tavily_api_key
 )
 from utils.providers import validate_api_key, get_provider_info, list_available_models
 from pathlib import Path
@@ -176,6 +176,107 @@ else:
             help=f"View {provider_info.get('name', current_provider)}'s pricing details",
             use_container_width=True
         )
+
+st.markdown("---")
+
+# Tavily API Key section (for image search and research features)
+st.markdown("## 🔍 Tavily API Key (Optional)")
+st.markdown("Tavily powers image search and enhanced research features. This is optional - the app works without it.")
+
+# Check current Tavily API key status
+current_tavily_key = load_tavily_api_key()
+
+if current_tavily_key:
+    # Tavily API key is configured
+    st.success("✅ Tavily API Key is configured")
+    
+    # Show masked key
+    masked_key = current_tavily_key[:7] + "..." + current_tavily_key[-4:]
+    st.code(masked_key)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🔄 Update Tavily Key", use_container_width=True):
+            st.session_state.show_update_tavily_key = True
+    
+    with col2:
+        if st.button("🗑️ Remove Tavily Key", type="secondary", use_container_width=True):
+            from utils.config import load_config, save_config
+            config = load_config()
+            if "tavily_api_key" in config:
+                del config["tavily_api_key"]
+                save_config(config)
+            st.success("Tavily API key removed successfully!")
+            st.rerun()
+    
+    # Update key form
+    if st.session_state.get('show_update_tavily_key', False):
+        with st.form("update_tavily_api_key"):
+            st.markdown("### Update Tavily API Key")
+            new_tavily_key = st.text_input(
+                "New Tavily API Key:",
+                type="password",
+                placeholder="tvly-...",
+                help="Enter your new Tavily API key"
+            )
+            
+            if st.form_submit_button("Save New Tavily Key", type="primary"):
+                if new_tavily_key and new_tavily_key.startswith('tvly-'):
+                    save_tavily_api_key(new_tavily_key)
+                    st.session_state.show_update_tavily_key = False
+                    st.success("✅ Tavily API key updated successfully!")
+                    st.rerun()
+                else:
+                    st.error("Please enter a valid Tavily API key (should start with 'tvly-')")
+else:
+    # No Tavily API key configured
+    st.info("ℹ️ No Tavily API Key configured")
+    st.markdown("""
+    Tavily enhances Autodidact with:
+    - 🖼️ Educational image search for visual learning
+    - 🔍 Enhanced research capabilities
+    - 📊 Better content discovery
+    
+    **This is optional** - the core tutoring features work without it.
+    """)
+    
+    # Tavily API key input
+    tavily_api_key = st.text_input(
+        "Enter your Tavily API key (optional):",
+        type="password",
+        placeholder="tvly-...",
+        help="Your Tavily API key will be stored securely in ~/.autodidact/.env.json"
+    )
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("💾 Save Tavily Key", type="secondary", use_container_width=True, disabled=not tavily_api_key):
+            if tavily_api_key and tavily_api_key.startswith('tvly-'):
+                save_tavily_api_key(tavily_api_key)
+                st.success("✅ Tavily API key saved successfully!")
+                st.rerun()
+            else:
+                st.error("Please enter a valid Tavily API key (should start with 'tvly-')")
+    
+    with col2:
+        st.link_button(
+            "🔗 Get Tavily Key",
+            "https://tavily.com",
+            help="Create a Tavily API key on their website",
+            use_container_width=True
+        )
+    
+    with col3:
+        st.link_button(
+            "📖 Tavily Pricing",
+            "https://tavily.com/pricing",
+            help="View Tavily's pricing details",
+            use_container_width=True
+        )
+
+st.markdown("---")
 
 # Storage location section
 st.markdown("---")

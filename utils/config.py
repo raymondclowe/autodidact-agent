@@ -260,8 +260,28 @@ def get_graph_path(project_id: str) -> Path:
 
 
 def get_deep_research_response_path(project_id: str) -> Path:
-    """Get the raw deep research response file path"""
+    """Get the deep research response JSON file path for a project"""
     return get_project_directory(project_id) / "deep_research_response.json"
+
+
+def save_tavily_api_key(api_key: str):
+    """Save Tavily API key to config file"""
+    config = load_config()
+    config["tavily_api_key"] = api_key
+    save_config(config)
+
+
+def load_tavily_api_key() -> Optional[str]:
+    """Load Tavily API key from config file or environment variable"""
+    # First try config file
+    config = load_config()
+    api_key = config.get("tavily_api_key")
+    
+    # Fallback to environment variable
+    if not api_key:
+        api_key = os.getenv('COPILOT_TAVILY_API_KEY')
+    
+    return api_key
 
 
 def save_project_files(project_id: str, report_markdown: str, graph_data: Dict, full_result: Dict) -> str:
