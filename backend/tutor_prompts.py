@@ -179,36 +179,36 @@ You can create any diagram by writing JSXGraph JavaScript directly. The system w
 
 **Creating Points:**
 ```javascript
-var A = board.create('point', [2, 3], {name:'A', size:3});
-var B = board.create('point', [0, 0], {name:'B', size:3});
+var A = board.create('point', [2, 3], {{name:'A', size:3}});
+var B = board.create('point', [0, 0], {{name:'B', size:3}});
 ```
 
 **Creating Lines and Segments:**
 ```javascript
-var line = board.create('line', [A, B], {strokeColor:'blue'});
-var segment = board.create('segment', [A, B], {strokeWidth:2});
+var line = board.create('line', [A, B], {{strokeColor:'blue'}});
+var segment = board.create('segment', [A, B], {{strokeWidth:2}});
 ```
 
 **Creating Circles:**
 ```javascript
-var circle = board.create('circle', [centerPoint, radiusPoint], {strokeColor:'red'});
+var circle = board.create('circle', [centerPoint, radiusPoint], {{strokeColor:'red'}});
 ```
 
 **Creating Functions:**
 ```javascript
-var parabola = board.create('functiongraph', [function(x){ return x*x; }, -5, 5]);
-var sine = board.create('functiongraph', [function(x){ return Math.sin(x); }, -6, 6]);
+var parabola = board.create('functiongraph', [function(x){{ return x*x; }}, -5, 5]);
+var sine = board.create('functiongraph', [function(x){{ return Math.sin(x); }}, -6, 6]);
 ```
 
 **Board Configuration:**
 ```javascript
-var board = JXG.JSXGraph.initBoard('board_id', {
+var board = JXG.JSXGraph.initBoard('board_id', {{
     boundingbox: [-5, 5, 5, -5],  // [x_min, y_max, x_max, y_min]
     axis: true,                   // Show coordinate axes
     grid: false,                  // Show/hide grid
     showNavigation: true,         // Zoom/pan controls
     showZoom: true               // Zoom buttons
-});
+}});
 ```
 
 **INTERACTIVE FEATURES:**
@@ -223,16 +223,16 @@ Let's explore how changing the vertex affects a parabola:
 
 <jsxgraph>custom:vertex_parabola</jsxgraph>
 ```javascript
-var board = JXG.JSXGraph.initBoard('board_vertex_parabola', {
+var board = JXG.JSXGraph.initBoard('board_vertex_parabola', {{
     boundingbox: [-6, 8, 6, -2], axis: true, grid: true
-});
+}});
 
-var vertex = board.create('point', [0, 1], {name:'Vertex', size:4, color:'red'});
-var parabola = board.create('parabola', [vertex, [0, 0, 1]], {strokeWidth:3});
+var vertex = board.create('point', [0, 1], {{name:'Vertex', size:4, color:'red'}});
+var parabola = board.create('parabola', [vertex, [0, 0, 1]], {{strokeWidth:3}});
 
-board.create('text', [2, 6, function(){ 
+board.create('text', [2, 6, function(){{ 
     return 'Vertex: (' + vertex.X().toFixed(1) + ', ' + vertex.Y().toFixed(1) + ')'; 
-}]);
+}}]);
 ```
 
 Try dragging the red vertex point to see how it changes the parabola shape!
