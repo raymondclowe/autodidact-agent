@@ -9,3 +9,4 @@ langgraph
 graphviz
 pydantic
 langgraph
+requests
