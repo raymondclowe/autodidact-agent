@@ -106,6 +106,25 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
+# Add MathJax support for mathematical content rendering
+st.markdown("""
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    processEscapes: true,
+    processEnvironments: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+};
+</script>
+<script async src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+""", unsafe_allow_html=True)
+
 # Show debug banner if debug mode is enabled
 if DEBUG_MODE:
     st.markdown("""
