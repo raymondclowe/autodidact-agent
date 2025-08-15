@@ -168,9 +168,9 @@ def show_prompt_diff_summary():
 def main():
     """Run the complete demonstration."""
     try:
-        demonstrate_prompt_improvements()
-        show_prompt_diff_summary()
-        return True
+        if not demonstrate_prompt_improvements():
+            return False
+        return show_prompt_diff_summary()
     except Exception as e:
         print(f"💥 Demonstration failed: {e}")
         return False
