@@ -16,6 +16,24 @@ Force completes the current learning session with a high score (85%).
 **Usage:**
 Type `/completed` in the chat input during any active learning session.
 
+### `/next`, `/got_it`, `/understood`
+**NEW**: Mark the current learning objective as complete and advance to the next one.
+
+**What it does:**
+- Simulates natural objective completion by injecting a control block
+- Advances from current learning point to the next objective
+- Provides granular control over lesson progression
+- More focused than completing the entire session
+
+**Usage:**
+- Type `/next` to skip to the next learning objective
+- Type `/got_it` as a more natural alternative
+- Type `/understood` as another natural alternative
+
+**Example Scenarios:**
+- During teaching: AI explains photosynthesis → `/got_it` → AI moves to light reactions
+- During recap: AI asks about cell theory → `/understood` → AI moves to next recap point
+
 ### `/help` or `/debug`
 Shows a help message with available debug commands and current debug mode status.
 
@@ -23,7 +41,7 @@ Shows a help message with available debug commands and current debug mode status
 Type `/help` or `/debug` in the chat input to see the available commands.
 
 ### `/debug_mode`
-**NEW**: Toggles debug mode on/off to show detailed scoring information.
+Toggles debug mode on/off to show detailed scoring information.
 
 **What it does:**
 - Enables/disables verbose debug information display

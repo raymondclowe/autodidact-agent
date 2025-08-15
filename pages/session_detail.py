@@ -383,6 +383,44 @@ if not is_completed:
                     # Display debug mode toggle message
                     with st.chat_message("assistant"):
                         create_speech_enabled_markdown(debug_result['message'], add_button=True)
+                elif debug_result.get('is_objective_advancement'):
+                    # Handle objective advancement - inject AI message with control block
+                    if debug_result.get('inject_control_block'):
+                        # Add the simulated AI message to history
+                        simulated_message = debug_result.get('simulated_ai_message', 
+                            "Great! I can see you understand this concept well. Let's move on to the next learning point.\n\n<control>{\"objective_complete\": true}</control>")
+                        
+                        # Add the message to history and let the normal flow process it
+                        st.session_state.history.append({
+                            "role": "assistant", 
+                            "content": simulated_message
+                        })
+                        
+                        # Update graph state history to match
+                        if 'graph_state' in st.session_state:
+                            st.session_state.graph_state['history'] = st.session_state.history.copy()
+                            _save_state(st.session_state.graph_state)
+                        
+                        # Display the debug advancement message
+                        with st.chat_message("assistant"):
+                            create_speech_enabled_markdown(debug_result['message'], add_button=True)
+                        
+                        # Display clean version of the advancement (without control block)
+                        with st.chat_message("assistant"):
+                            clean_message = simulated_message.split('<control>')[0].strip()
+                            create_speech_enabled_markdown(clean_message, add_button=True)
+                        
+                        st.rerun()  # Refresh to process the objective completion
+                        
+                    else:
+                        # Fallback: just show the message
+                        st.session_state.history.append({
+                            "role": "assistant", 
+                            "content": debug_result['message']
+                        })
+                        
+                        with st.chat_message("assistant"):
+                            create_speech_enabled_markdown(debug_result['message'], add_button=True)
                 else:
                     # Add system message about debug completion
                     st.session_state.history.append({

@@ -48,53 +48,71 @@ def force_complete_session(session_id: str, node_id: str) -> Dict[str, Any]:
     try:
         # Set a high score for debug completion
         # This is a HARDCODED score for debug purposes - different from normal scoring
-        debug_score = DEBUG_SCORE
+        completion_result = complete_session(session_id, DEBUG_SCORE)
         
-        # Get node information to update learning objectives
-        node_info = get_node_with_objectives(node_id)
-        if not node_info:
+        if completion_result['success']:
+            # Update mastery for all objectives in this node (debug mode)
+            node_data = get_node_with_objectives(node_id)
+            if node_data and 'objectives' in node_data:
+                for obj in node_data['objectives']:
+                    update_mastery_direct(node_id, obj['id'], DEBUG_SCORE)
+            
+            logger.info(f"DEBUG: Force completed session {session_id} with score {DEBUG_SCORE}")
+            
+            return {
+                'success': True,
+                'message': f"🚀 **Session Force Completed!**\n\nScore: {int(DEBUG_SCORE * 100)}% (Debug Mode)\n\n*This was a debug completion with hardcoded high score.*",
+                'is_debug_completion': True,
+                'final_score': DEBUG_SCORE
+            }
+        else:
             return {
                 'success': False,
-                'error': 'Node not found'
+                'error': f"Failed to complete session: {completion_result.get('error', 'Unknown error')}"
             }
-        
-        # Create learning objective scores - set all to high mastery
-        lo_scores = {lo['id']: debug_score for lo in node_info.get('learning_objectives', [])}
-        
-        # Update mastery scores (use direct update for debug completion)
-        if lo_scores:
-            update_mastery_direct(node_id, lo_scores)
-        
-        # Complete the session
-        complete_session(session_id, debug_score)
-        
-        debug_info = {
-            'scoring_method': 'HARDCODED_DEBUG',
-            'debug_score': debug_score,
-            'normal_scoring_method': 'AI_LLM_GRADING',
-            'normal_scoring_description': 'In normal sessions, scores are calculated by AI (LLM) evaluating user answers to quiz questions',
-            'debug_scoring_description': f'Debug mode uses a fixed high score of {int(debug_score * 100)}% to allow quick progression'
-        }
-        
-        return {
-            'success': True,
-            'score': debug_score,
-            'objectives_updated': len(lo_scores),
-            'message': f"🔧 DEBUG: Session force-completed with {int(debug_score * 100)}% score",
-            'debug_info': debug_info if _debug_mode_enabled else None
-        }
-        
+    
     except Exception as e:
-        logger.error(f"Error in force_complete_session for session {session_id}: {e}", exc_info=True)
+        logger.error(f"Error in force_complete_session: {e}")
         return {
             'success': False,
-            'error': str(e)
+            'error': f"Error completing session: {str(e)}"
+        }
+
+
+def advance_to_next_objective(session_info: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Mark the current objective as complete and advance to the next one
+    This simulates the AI completing an objective naturally
+    
+    Args:
+        session_info: Current session information
+    
+    Returns:
+        Dict with advancement status and details
+    """
+    try:
+        # This works by injecting a control block that the session will process
+        # as if the AI naturally completed the objective
+        return {
+            'success': True,
+            'message': "✅ **Moving to next objective...**\n\n*Marking current learning point as understood.*",
+            'is_objective_advancement': True,
+            'inject_control_block': True,  # Special flag for session processing
+            'control_block': '{"objective_complete": true}',  # The actual control to inject
+            'simulated_ai_message': "Great! I can see you understand this concept well. Let's move on to the next learning point.\n\n<control>{\"objective_complete\": true}</control>"
+        }
+    
+    except Exception as e:
+        logger.error(f"Error in advance_to_next_objective: {e}")
+        return {
+            'success': False,
+            'error': f"Error advancing objective: {str(e)}"
         }
 
 
 def handle_debug_command(message: str, session_info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
-    Handle debug commands from user input
+    Handle debug commands for quick progression through lessons
     
     Args:
         message: User's message
@@ -115,6 +133,8 @@ def handle_debug_command(message: str, session_info: Dict[str, Any]) -> Optional
             session_info['id'], 
             session_info['node_id']
         )
+    elif command in ['/next', '/got_it', '/understood']:
+        return advance_to_next_objective(session_info)
     elif command in ['/help', '/debug']:
         debug_status = "🟢 ON" if _debug_mode_enabled else "🔴 OFF"
         return {
@@ -122,6 +142,7 @@ def handle_debug_command(message: str, session_info: Dict[str, Any]) -> Optional
             'message': f"""🔧 **Debug Commands Available:**
 
 • `/completed` - Force complete the current session with high score ({int(DEBUG_SCORE * 100)}%)
+• `/next` or `/got_it` or `/understood` - Mark current objective as complete and move to next
 • `/help` or `/debug` - Show this help message
 • `/debug_mode` - Toggle debug mode {debug_status}
 
