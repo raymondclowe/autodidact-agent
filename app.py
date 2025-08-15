@@ -62,11 +62,12 @@ home = st.Page("pages/home.py", title="Home", url_path="", default=True)
 new_project = st.Page("pages/new_project.py", title="New Course", url_path="new")
 project = st.Page("pages/project_detail.py", title="Course", url_path="project")
 session = st.Page("pages/session_detail.py", title="Lesson", url_path="session") 
+study_notes = st.Page("pages/study_notes.py", title="Study Notes", url_path="notes")
 settings = st.Page("pages/settings.py", title="Settings", url_path="settings")
 
 # Create navigation with all pages
 # We'll hide Project and Session from the sidebar using CSS
-pg = st.navigation([home, new_project, project, session, settings])
+pg = st.navigation([home, new_project, project, session, study_notes, settings])
 
 # Always hide Project and Session page from sidebar
 # Add debug mode styling if debug is enabled

@@ -21,13 +21,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Page configuration
-st.set_page_config(
-    page_title="Study Notes - Autodidact",
-    page_icon="📚",
-    layout="wide"
-)
-
 def main():
     """Main function for study notes page"""
     
