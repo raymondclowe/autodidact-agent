@@ -44,7 +44,7 @@ RECAP FLOW  (MUST follow all)
 3. **If a learner answer is weak or missing**:
    - Briefly guide them toward the correct idea *or* supply the right information.
 4. **When all recap questions are answered satisfactorily**, append
-   `<control>{"prereq_complete": true}</control>`
+  `<control>{{"prereq_complete": true}}</control>`
    - Do NOT emit the control block earlier.
 
 OFF-TOPIC HANDLING ✅
