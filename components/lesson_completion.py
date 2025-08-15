@@ -6,7 +6,10 @@ Displays completion summary when session ends
 import streamlit as st
 from typing import Dict, Any
 from datetime import datetime
+import logging
 from backend.session_state import SessionState, get_session_completion_info
+from backend.note_generator import generate_lesson_notes
+from backend.db import get_session_info
 
 
 def display_session_completion_summary(session_state: SessionState, node_info: Dict[str, Any]) -> None:
@@ -164,16 +167,16 @@ def show_study_notes_offer(session_state: SessionState, node_info: Dict[str, Any
         with col1:
             if st.button("📝 **Generate Study Notes**", type="primary", key="generate_study_notes"):
                 try:
-                    # Mock session info - in real implementation this would come from database
-                    session_info = {
-                        'id': st.session_state.get('current_session_id', 'mock_session'),
-                        'project_id': st.session_state.get('current_project_id', 'mock_project'),
-                        'node_id': node_info.get('id', 'mock_node'),
-                        'final_score': session_state.get('final_score', 0.8),
-                        'status': 'completed'
-                    }
-                    
-                    from backend.note_generator import generate_lesson_notes
+                    # Get real session info from database
+                    session_id = st.session_state.get('current_session_id')
+                    if not session_id:
+                        st.error("Could not determine current session.")
+                        return
+                        
+                    session_info = get_session_info(session_id)
+                    if not session_info:
+                        st.error(f"Could not retrieve info for session {session_id}")
+                        return
                     
                     with st.spinner("✨ Generating your personalized study notes..."):
                         notes = generate_lesson_notes(session_state, session_info, node_info)
@@ -187,7 +190,6 @@ def show_study_notes_offer(session_state: SessionState, node_info: Dict[str, Any
                         
                 except Exception as e:
                     st.error(f"❌ Error generating study notes: {str(e)}")
-                    import logging
                     logging.error(f"Study notes generation error: {e}")
         
         with col2:

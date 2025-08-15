@@ -5,6 +5,7 @@ Handles AI-powered study note creation from completed lessons
 
 import json
 import uuid
+import html
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from backend.session_state import SessionState, Objective
@@ -12,6 +13,11 @@ from backend.db import get_db_connection
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Constants
+MIN_CONTENT_LENGTH = 100  # Minimum content length to extract concepts
+MAX_CONCEPTS_LIMIT = 10   # Maximum number of key concepts to extract
+DEFAULT_SESSION_DURATION = 25  # Default session duration in minutes if calculation fails
 
 
 def generate_lesson_notes(session_state: SessionState, session_info: Dict, node_info: Dict) -> Dict:
@@ -64,7 +70,7 @@ def generate_lesson_notes(session_state: SessionState, session_info: Dict, node_
             ],
             'key_concepts': key_concepts,
             'lesson_overview': generate_lesson_overview(history, objectives),
-            'insights': extract_key_insights(history, objectives),
+            'insights': generate_key_insights(history, objectives),
             'review_questions': generate_review_questions(objectives, key_concepts),
             'performance': {
                 'score': final_score,
@@ -84,7 +90,7 @@ def generate_lesson_notes(session_state: SessionState, session_info: Dict, node_
         note_id = str(uuid.uuid4())
         
         # Save to database
-        save_notes_to_database(
+        if not save_notes_to_database(
             note_id=note_id,
             session_id=session_id,
             project_id=project_id,
@@ -93,7 +99,8 @@ def generate_lesson_notes(session_state: SessionState, session_info: Dict, node_
             content=note_content,
             formatted_html=formatted_html,
             summary=summary
-        )
+        ):
+            raise RuntimeError(f"Failed to save study notes for session {session_id}")
         
         return {
             'id': note_id,
@@ -126,7 +133,7 @@ def extract_key_concepts(session_history: List[Dict], objectives: List[Objective
     # Extract important topics from session history
     # Look for assistant messages that contain explanations or key information
     for turn in session_history:
-        if turn.get('role') == 'assistant' and len(turn.get('content', '')) > 100:
+        if turn.get('role') == 'assistant' and len(turn.get('content', '')) > MIN_CONTENT_LENGTH:
             content = turn.get('content', '')
             
             # Look for structured content or definitions
@@ -143,7 +150,7 @@ def extract_key_concepts(session_history: List[Dict], objectives: List[Objective
                         key_concepts.append(concept)
                         break
     
-    return key_concepts[:10]  # Limit to top 10 concepts
+    return key_concepts[:MAX_CONCEPTS_LIMIT]  # Limit to top concepts
 
 
 def generate_lesson_overview(history: List[Dict], objectives: List[Objective]) -> str:
@@ -167,8 +174,8 @@ def generate_lesson_overview(history: List[Dict], objectives: List[Objective]) -
     return overview
 
 
-def extract_key_insights(history: List[Dict], objectives: List[Objective]) -> List[str]:
-    """Extract key insights from the learning session"""
+def generate_key_insights(history: List[Dict], objectives: List[Objective]) -> List[str]:
+    """Generate key insights from the learning session"""
     insights = []
     
     # Generate insights based on mastery patterns
@@ -234,17 +241,33 @@ def get_mastery_level(score: float) -> str:
 
 def calculate_session_duration(session_info: Dict) -> int:
     """Calculate session duration in minutes"""
-    # Simplified calculation - in real implementation would use timestamps
-    return 25  # Default duration
+    start_time_str = session_info.get('started_at')
+    end_time_str = session_info.get('completed_at')
+
+    if start_time_str and end_time_str:
+        try:
+            start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+            end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00'))
+            duration_seconds = (end_time - start_time).total_seconds()
+            return max(1, round(duration_seconds / 60))  # Return at least 1 minute
+        except (ValueError, TypeError):
+            pass  # Fallback to default if parsing fails
+
+    return DEFAULT_SESSION_DURATION  # Default duration
 
 
 def format_for_print(note_content: Dict) -> str:
-    """Format notes for print-optimized display"""
-    html = f"""
+    """Format notes for print-optimized display with HTML escaping"""
+    # Escape all user-generated content to prevent XSS
+    lesson_title = html.escape(str(note_content['lesson_title']))
+    lesson_overview = html.escape(str(note_content['lesson_overview']))
+    mastery_level = html.escape(str(note_content['performance']['mastery_level']))
+    
+    html_content = f"""
     <div class="printable-notes">
         <div class="notes-header">
             <h1 class="lesson-title">📚 STUDY NOTES</h1>
-            <h2 class="lesson-name">{note_content['lesson_title']}</h2>
+            <h2 class="lesson-name">{lesson_title}</h2>
             <div class="completion-info">
                 Completed: {datetime.fromisoformat(note_content['completion_date']).strftime('%B %d, %Y')} | 
                 Score: {note_content['final_score']*100:.0f}% | 
@@ -256,7 +279,7 @@ def format_for_print(note_content: Dict) -> str:
         
         <div class="lesson-overview">
             <h3>📖 LESSON OVERVIEW</h3>
-            <p>{note_content['lesson_overview']}</p>
+            <p>{lesson_overview}</p>
         </div>
         
         <div class="section-divider">───────────────────────────────────────────────────────</div>
@@ -268,9 +291,10 @@ def format_for_print(note_content: Dict) -> str:
     
     for obj in note_content['objectives']:
         status = "✅" if obj['mastered'] else "🔄"
-        html += f"                <li>{status} {obj['description']}</li>\n"
+        escaped_description = html.escape(str(obj['description']))
+        html_content += f"                <li>{status} {escaped_description}</li>\n"
     
-    html += """
+    html_content += """
             </ul>
         </div>
         
@@ -281,14 +305,16 @@ def format_for_print(note_content: Dict) -> str:
     """
     
     for concept in note_content['key_concepts']:
-        html += f"""
+        escaped_title = html.escape(str(concept['title']))
+        escaped_explanation = html.escape(str(concept['explanation']))
+        html_content += f"""
             <div class="concept-item">
-                <h4>🔹 {concept['title']}</h4>
-                <p>{concept['explanation']}</p>
+                <h4>🔹 {escaped_title}</h4>
+                <p>{escaped_explanation}</p>
             </div>
         """
     
-    html += f"""
+    html_content += f"""
         </div>
         
         <div class="section-divider">───────────────────────────────────────────────────────</div>
@@ -299,9 +325,10 @@ def format_for_print(note_content: Dict) -> str:
     """
     
     for insight in note_content['insights']:
-        html += f"                <li>{insight}</li>\n"
+        escaped_insight = html.escape(str(insight))
+        html_content += f"                <li>{escaped_insight}</li>\n"
     
-    html += f"""
+    html_content += f"""
             </ul>
         </div>
         
@@ -313,9 +340,10 @@ def format_for_print(note_content: Dict) -> str:
     """
     
     for question in note_content['review_questions']:
-        html += f"                <li>{question}</li>\n"
+        escaped_question = html.escape(str(question))
+        html_content += f"                <li>{escaped_question}</li>\n"
     
-    html += f"""
+    html_content += f"""
             </ol>
         </div>
         
@@ -325,7 +353,7 @@ def format_for_print(note_content: Dict) -> str:
             <h3>📈 YOUR PROGRESS</h3>
             <ul class="performance-list">
                 <li>Lesson Score: {note_content['final_score']*100:.0f}%</li>
-                <li>Mastery Level: {note_content['performance']['mastery_level']}</li>
+                <li>Mastery Level: {mastery_level}</li>
                 <li>Objectives Completed: {note_content['performance']['objectives_completed']}/{note_content['performance']['total_objectives']}</li>
                 <li>Time Invested: {note_content['duration_minutes']} minutes</li>
             </ul>
@@ -339,7 +367,7 @@ def format_for_print(note_content: Dict) -> str:
     </div>
     """
     
-    return html
+    return html_content
 
 
 def generate_summary(note_content: Dict) -> str:

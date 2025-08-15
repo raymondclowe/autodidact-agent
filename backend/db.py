@@ -1039,6 +1039,8 @@ def get_session_info(session_id: str) -> Optional[Dict[str, Any]]:
                 s.status,
                 s.session_number,
                 s.final_score,
+                s.started_at,
+                s.completed_at,
                 p.topic as project_topic,
                 n.label as node_label,
                 n.original_id as node_original_id
@@ -1058,9 +1060,11 @@ def get_session_info(session_id: str) -> Optional[Dict[str, Any]]:
                 "status": row[3],
                 "session_number": row[4],
                 "final_score": row[5],
-                "project_topic": row[6],
-                "node_label": row[7],
-                "node_original_id": row[8]
+                "started_at": row[6],
+                "completed_at": row[7],
+                "project_topic": row[8],
+                "node_label": row[9],
+                "node_original_id": row[10]
             }
         return None
 
