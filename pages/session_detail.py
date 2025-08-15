@@ -25,6 +25,32 @@ from typing import Any, Dict
 
 # Sidebar is shown globally in app.py
 
+def should_clear_session_state(current_session_id: str, current_project_id: str) -> bool:
+    """Check if we need to clear session state due to session/project change"""
+    if 'graph_state' not in st.session_state:
+        return False
+    
+    # Check if we're switching to a different session or project
+    existing_state = st.session_state.graph_state
+    if not isinstance(existing_state, dict):
+        return True
+    
+    return (existing_state.get('session_id') != current_session_id or 
+            existing_state.get('project_id') != current_project_id)
+
+def clear_session_specific_state():
+    """Clear session-specific state variables when switching sessions"""
+    session_keys = [
+        'graph_state', 'history', 'turn_count', 'current_phase',
+        'messages', 'selected_session_id'  # Clear any lingering session selection state
+    ]
+    
+    for key in session_keys:
+        if key in st.session_state:
+            del st.session_state[key]
+    
+    print("[clear_session_specific_state] Cleared session state for course switch")
+
 # Initialize speech functionality
 initialize_speech_state()
 create_global_speech_component()
@@ -60,6 +86,11 @@ def run_tutor_response(session_info, node_info):
     from backend.session_state import create_initial_state
     print(f"[run_tutor_response] session_info: {session_info}")
     tutor_graph = session_graph
+    
+    # Check if we need to clear session state due to session/project change
+    if should_clear_session_state(session_info['id'], session_info['project_id']):
+        print(f"[run_tutor_response] Clearing session state due to session/project change")
+        clear_session_specific_state()
     
     # Initialize or update state
     if 'graph_state' not in st.session_state:
@@ -271,6 +302,11 @@ if state is None:
     state = create_initial_state(session_id, project_id, node_id)
     # Save initial state immediately
     _save_state(state)
+
+# Check if we need to clear session state due to session/project change
+if should_clear_session_state(session_id, project_id):
+    print(f"[session_detail] Clearing session state due to session/project change")
+    clear_session_specific_state()
 
 # Sync loaded state with Streamlit session state
 if "history" not in st.session_state:
