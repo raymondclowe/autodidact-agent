@@ -108,23 +108,48 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Add MathJax support for mathematical content rendering
-st.markdown("""
+from components.simple_math_renderer import MATH_RENDERER_JS
+
+st.components.v1.html(f"""
 <script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['\\(', '\\)']],
-    displayMath: [['\\[', '\\]']],
+window.MathJax = {{
+  tex: {{
+    inlineMath: [['\\\\(', '\\\\)']],
+    displayMath: [['\\\\[', '\\\\]']],
     processEscapes: true,
     processEnvironments: true
-  },
-  options: {
+  }},
+  options: {{
     skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-  }
-};
+  }},
+  startup: {{
+    ready: function () {{
+      MathJax.startup.defaultReady();
+      console.log('MathJax is ready and initialized');
+      // Make MathJax available globally for reprocessing
+      window.mathJaxReady = true;
+    }}
+  }}
+}};
+
+// Load MathJax with fallback
+(function() {{
+  var script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+  script.async = true;
+  script.onload = function() {{
+    console.log('MathJax script loaded successfully');
+  }};
+  script.onerror = function() {{
+    console.log('MathJax CDN failed, using fallback renderer');
+    // MathJax failed to load, SimpleMathRenderer will be used as fallback
+  }};
+  document.head.appendChild(script);
+}})();
 </script>
-<script async src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-<script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-""", unsafe_allow_html=True)
+
+{MATH_RENDERER_JS}
+""", height=50, scrolling=False)
 
 # Show debug banner if debug mode is enabled
 if DEBUG_MODE:

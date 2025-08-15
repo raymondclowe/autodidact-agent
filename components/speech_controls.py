@@ -134,23 +134,92 @@ def create_speech_enabled_markdown(text: str, add_button: bool = True, auto_spea
     
     # Trigger MathJax reprocessing for dynamically added content
     # This ensures mathematical formulas render properly in lessons
-    st.components.v1.html("""
+    from components.simple_math_renderer import MATH_RENDERER_JS
+    
+    st.components.v1.html(f"""
+    {MATH_RENDERER_JS}
+    
     <script>
-    // Wait for MathJax to be loaded, then trigger reprocessing
-    if (window.MathJax && window.MathJax.typesetPromise) {
-        window.MathJax.typesetPromise().catch(function (err) {
-            console.log('MathJax typeset error:', err.message);
-        });
-    } else {
-        // If MathJax isn't loaded yet, wait a bit and try again
-        setTimeout(function() {
-            if (window.MathJax && window.MathJax.typesetPromise) {
-                window.MathJax.typesetPromise().catch(function (err) {
+    // Robust MathJax reprocessing with fallback to SimpleMathRenderer
+    (function() {{
+        let retryCount = 0;
+        const maxRetries = 30; // Reduce retries since we have a fallback (3 seconds)
+        
+        function tryMathJaxReprocessing() {{
+            // Access MathJax from parent window if we're in an iframe
+            const mathJax = window.parent && window.parent.MathJax ? window.parent.MathJax : window.MathJax;
+            const mathJaxReady = window.parent && window.parent.mathJaxReady ? window.parent.mathJaxReady : window.mathJaxReady;
+            
+            if (mathJax && mathJax.typesetPromise && mathJaxReady) {{
+                console.log('MathJax found and ready, triggering reprocessing...');
+                mathJax.typesetPromise().then(function() {{
+                    console.log('MathJax reprocessing completed successfully');
+                }}).catch(function (err) {{
                     console.log('MathJax typeset error:', err.message);
-                });
-            }
-        }, 100);
-    }
+                    useFallbackRenderer();
+                }});
+                return true; // Success
+            }} else if (retryCount < maxRetries) {{
+                retryCount++;
+                if (retryCount % 10 === 0) {{
+                    console.log('Waiting for MathJax... attempt ' + retryCount + '/' + maxRetries);
+                }}
+                setTimeout(tryMathJaxReprocessing, 100);
+                return false; // Will retry
+            }} else {{
+                console.log('MathJax not found or not ready after ' + maxRetries + ' attempts, using fallback renderer');
+                useFallbackRenderer();
+                return false; // Give up on MathJax, use fallback
+            }}
+        }}
+        
+        function useFallbackRenderer() {{
+            // Use the SimpleMathRenderer that's included in this context
+            if (window.SimpleMathRenderer) {{
+                console.log('Using SimpleMathRenderer fallback in current context...');
+                // Process content in parent window
+                if (window.parent && window.parent.document) {{
+                    const parentDoc = window.parent.document;
+                    
+                    // Find and process math expressions in parent document
+                    let displayMath = parentDoc.querySelectorAll('p, div, span');
+                    displayMath.forEach(function(element) {{
+                        let content = element.innerHTML;
+                        if (content.includes('[') && content.includes(']')) {{
+                            // Replace display math expressions
+                            content = content.replace(/\[([^[\]]+)\]/g, function(match, expr) {{
+                                let rendered = window.SimpleMathRenderer.renderExpression(expr);
+                                return '<span style="display: block; text-align: center; margin: 10px 0; font-style: italic; font-weight: bold; color: #2E5090;">' + rendered + '</span>';
+                            }});
+                            element.innerHTML = content;
+                        }}
+                        
+                        // Replace inline math expressions (expression)
+                        content = element.innerHTML;
+                        if (content.includes('(') && content.includes(')')) {{
+                            content = content.replace(/\(([^()]*\\\\[^()]*[^()]*)\)/g, function(match, expr) {{
+                                if (expr.includes('\\\\')) {{ // Only process if it contains LaTeX
+                                    let rendered = window.SimpleMathRenderer.renderExpression(expr);
+                                    return '<span style="font-style: italic; color: #2E5090;">' + rendered + '</span>';
+                                }}
+                                return match;
+                            }});
+                            element.innerHTML = content;
+                        }}
+                    }});
+                    
+                    console.log('Fallback math rendering completed on parent document');
+                }} else {{
+                    console.log('Cannot access parent document for math rendering');
+                }}
+            }} else {{
+                console.log('SimpleMathRenderer not available in current context');
+            }}
+        }}
+        
+        // Start the process
+        tryMathJaxReprocessing();
+    }})();
     </script>
     """, height=1)
     
