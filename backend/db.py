@@ -202,6 +202,21 @@ def init_database():
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES project(id)
     );
+
+    CREATE TABLE IF NOT EXISTS study_notes (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        lesson_title TEXT NOT NULL,
+        generated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        content_json TEXT NOT NULL,  -- Structured note content as JSON
+        formatted_html TEXT NOT NULL,  -- Print-ready HTML content
+        summary TEXT,  -- Brief summary for collection display
+        FOREIGN KEY (session_id) REFERENCES session(id),
+        FOREIGN KEY (project_id) REFERENCES project(id),
+        FOREIGN KEY (node_id) REFERENCES node(id)
+    );
     
     -- Create indexes for common queries
     CREATE INDEX IF NOT EXISTS idx_node_project ON node(project_id);
@@ -215,6 +230,10 @@ def init_database():
     CREATE INDEX IF NOT EXISTS idx_generic_profile_updated ON generic_learner_profile(updated_at);
     CREATE INDEX IF NOT EXISTS idx_topic_profile_project_topic ON topic_learner_profile(project_id, topic);
     CREATE INDEX IF NOT EXISTS idx_topic_profile_updated ON topic_learner_profile(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_session ON study_notes(session_id);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_project ON study_notes(project_id);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_node ON study_notes(node_id);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_date ON study_notes(generated_date);
     """
     
     with get_db_connection() as conn:

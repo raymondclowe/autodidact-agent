@@ -79,8 +79,11 @@ def display_session_completion_summary(session_state: SessionState, node_info: D
         mastery_level = get_mastery_level(completion_info["final_score"])
         st.markdown(f"### 🎯 **Mastery Level:** {mastery_level}")
         
-        # Next steps
+        # Study notes generation offer
         st.divider()
+        show_study_notes_offer(session_state, node_info)
+        
+        # Next steps
         st.markdown("**Ready for the next lesson!** 🚀")
 
 
@@ -124,3 +127,85 @@ def should_show_completion_summary(session_state: SessionState) -> bool:
     return (current_phase == "completed" and 
             len(objectives) > 0 and 
             len(completed) > 0)
+
+
+def show_study_notes_offer(session_state: SessionState, node_info: Dict[str, Any]) -> None:
+    """
+    Show offer to generate study notes after lesson completion
+    
+    Args:
+        session_state: Current session state
+        node_info: Information about the completed lesson node
+    """
+    # Check if lesson is truly completed
+    if session_state.get("current_phase") != "completed":
+        return
+    
+    # Create a nice offer box
+    with st.container():
+        st.markdown("### 📚 **Create Study Notes**")
+        st.markdown(f"**Great job completing {node_info.get('label', 'this lesson')}!**")
+        st.markdown("Would you like to generate printable study notes for this lesson?")
+        
+        # Benefits explanation
+        with st.expander("📖 What's included in study notes?"):
+            st.markdown("""
+            Your personalized study notes will include:
+            - **Lesson overview** and key concepts covered
+            - **Learning objectives** you mastered
+            - **Key insights** from your learning journey  
+            - **Review questions** to test your knowledge
+            - **Performance summary** with your scores
+            - **Print-optimized format** for physical study materials
+            """)
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("📝 **Generate Study Notes**", type="primary", key="generate_study_notes"):
+                try:
+                    # Mock session info - in real implementation this would come from database
+                    session_info = {
+                        'id': st.session_state.get('current_session_id', 'mock_session'),
+                        'project_id': st.session_state.get('current_project_id', 'mock_project'),
+                        'node_id': node_info.get('id', 'mock_node'),
+                        'final_score': session_state.get('final_score', 0.8),
+                        'status': 'completed'
+                    }
+                    
+                    from backend.note_generator import generate_lesson_notes
+                    
+                    with st.spinner("✨ Generating your personalized study notes..."):
+                        notes = generate_lesson_notes(session_state, session_info, node_info)
+                    
+                    st.success("✅ **Study notes generated successfully!**")
+                    st.info("📚 Your notes have been added to your study guide collection.")
+                    
+                    # Show a preview and option to view full notes
+                    if st.button("👁️ View Generated Notes", key="view_generated_notes"):
+                        st.session_state['show_generated_notes'] = notes
+                        
+                except Exception as e:
+                    st.error(f"❌ Error generating study notes: {str(e)}")
+                    import logging
+                    logging.error(f"Study notes generation error: {e}")
+        
+        with col2:
+            if st.button("⏰ Maybe Later", key="study_notes_later"):
+                st.info("💡 You can generate study notes later from your session history.")
+        
+        with col3:
+            if st.button("❌ No Thanks", key="study_notes_decline"):
+                st.info("Okay! You can always change your mind later.")
+    
+    # Display generated notes if requested
+    if st.session_state.get('show_generated_notes'):
+        st.markdown("---")
+        st.markdown("### 📖 Your Generated Study Notes")
+        
+        from components.study_notes import display_printable_notes
+        display_printable_notes(st.session_state['show_generated_notes'])
+        
+        # Clear the display flag
+        if st.button("✅ Done Viewing", key="done_viewing_notes"):
+            del st.session_state['show_generated_notes']
