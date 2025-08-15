@@ -202,6 +202,21 @@ def init_database():
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES project(id)
     );
+
+    CREATE TABLE IF NOT EXISTS study_notes (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        lesson_title TEXT NOT NULL,
+        generated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        content_json TEXT NOT NULL,  -- Structured note content as JSON
+        formatted_html TEXT NOT NULL,  -- Print-ready HTML content
+        summary TEXT,  -- Brief summary for collection display
+        FOREIGN KEY (session_id) REFERENCES session(id),
+        FOREIGN KEY (project_id) REFERENCES project(id),
+        FOREIGN KEY (node_id) REFERENCES node(id)
+    );
     
     -- Create indexes for common queries
     CREATE INDEX IF NOT EXISTS idx_node_project ON node(project_id);
@@ -215,6 +230,10 @@ def init_database():
     CREATE INDEX IF NOT EXISTS idx_generic_profile_updated ON generic_learner_profile(updated_at);
     CREATE INDEX IF NOT EXISTS idx_topic_profile_project_topic ON topic_learner_profile(project_id, topic);
     CREATE INDEX IF NOT EXISTS idx_topic_profile_updated ON topic_learner_profile(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_session ON study_notes(session_id);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_project ON study_notes(project_id);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_node ON study_notes(node_id);
+    CREATE INDEX IF NOT EXISTS idx_study_notes_date ON study_notes(generated_date);
     """
     
     with get_db_connection() as conn:
@@ -1020,6 +1039,8 @@ def get_session_info(session_id: str) -> Optional[Dict[str, Any]]:
                 s.status,
                 s.session_number,
                 s.final_score,
+                s.started_at,
+                s.completed_at,
                 p.topic as project_topic,
                 n.label as node_label,
                 n.original_id as node_original_id
@@ -1039,9 +1060,11 @@ def get_session_info(session_id: str) -> Optional[Dict[str, Any]]:
                 "status": row[3],
                 "session_number": row[4],
                 "final_score": row[5],
-                "project_topic": row[6],
-                "node_label": row[7],
-                "node_original_id": row[8]
+                "started_at": row[6],
+                "completed_at": row[7],
+                "project_topic": row[8],
+                "node_label": row[9],
+                "node_original_id": row[10]
             }
         return None
 
