@@ -121,9 +121,13 @@ def format_recap_prompt(
     """Fill the RECAP prompt with runtime values."""
     template = get_recap_prompt_template()
     
+    # Get images context
+    images_context = get_images_context_for_prompt()
+    
     return template.format(
         RECENT_LOS="; ".join(recent_los),
         NEXT_OBJ=next_obj,
         REF_LIST_BULLETS=build_ref_list(refs),
         LEARNER_PROFILE_CONTEXT=learner_profile_context,
+        VISIBLE_IMAGES_CONTEXT=images_context,
     )
