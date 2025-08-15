@@ -207,6 +207,7 @@ def render_content_with_images(
             
             # Search and display images for each request
             for idx, image_request in enumerate(image_requests):
+                placeholder = None
                 try:
                     from utils.tavily_integration import search_educational_image
                     
@@ -231,9 +232,25 @@ def render_content_with_images(
                     if idx < len(image_requests) - 1:
                         st.markdown("")
                         
+                except ValueError as e:
+                    # Handle API key errors specifically
+                    logger.error(f"Error processing image request '{image_request}': {e}")
+                    if placeholder:
+                        try:
+                            placeholder.empty()
+                        except:
+                            pass  # Ignore placeholder cleanup errors
+                    if "Tavily API key not found" in str(e):
+                        st.warning(f"🔑 Cannot display image for '{image_request}': {e}")
+                    else:
+                        st.warning(f"Could not load image for: {image_request}")
                 except Exception as e:
                     logger.error(f"Error processing image request '{image_request}': {e}")
-                    placeholder.empty()
+                    if placeholder:
+                        try:
+                            placeholder.empty()
+                        except:
+                            pass  # Ignore placeholder cleanup errors
                     st.warning(f"Could not load image for: {image_request}")
         
         logger.debug(f"Rendered content with {len(image_requests)} image requests")
