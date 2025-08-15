@@ -193,6 +193,55 @@ def get_objectives_for_testing(state: SessionState) -> List[Objective]:
         return state["objectives_to_teach"]
 
 
+def get_formatted_objectives_for_intro(state: SessionState) -> List[str]:
+    """Get formatted objectives list for lesson introduction display"""
+    objectives = state.get("objectives_to_teach", [])
+    return [obj.description for obj in objectives]
+
+
+def get_objectives_progress_info(state: SessionState) -> Dict:
+    """Get objectives progress information for progress tracking"""
+    objectives = state.get("objectives_to_teach", [])
+    current_idx = state.get("objective_idx", 0)
+    completed = set(state.get("completed_objectives", []))
+    
+    progress_items = []
+    for i, obj in enumerate(objectives):
+        status = "completed" if obj.id in completed else "current" if i == current_idx else "upcoming"
+        progress_items.append({
+            "description": obj.description,
+            "status": status,
+            "index": i
+        })
+    
+    return {
+        "items": progress_items,
+        "total": len(objectives),
+        "completed_count": len([item for item in progress_items if item["status"] == "completed"]),
+        "current_index": current_idx
+    }
+
+
+def get_session_completion_info(state: SessionState) -> Dict:
+    """Get session completion summary information"""
+    objectives = state.get("objectives_to_teach", [])
+    completed = set(state.get("completed_objectives", []))
+    scores = state.get("objective_scores", {})
+    
+    completed_objectives = [obj for obj in objectives if obj.id in completed]
+    total_score = sum(scores.values()) / len(scores) if scores else 0.0
+    
+    return {
+        "objectives": [obj.description for obj in completed_objectives],
+        "total_objectives": len(objectives),
+        "completed_count": len(completed_objectives),
+        "final_score": total_score,
+        "completion_percentage": (len(completed_objectives) / len(objectives)) * 100 if objectives else 100,
+        "session_start": state.get("session_start"),
+        "session_end": state.get("session_end")
+    }
+
+
 def calculate_final_score(state: SessionState) -> float:
     """Calculate overall mastery score from objective scores"""
     if not state["objective_scores"]:

@@ -265,14 +265,32 @@ def load_context_node(state: SessionState) -> SessionState:
 # ────────────────────────────────────────────────────────────────────────────
 
 def intro_node(state: SessionState) -> SessionState:
-    """Greets user and hands control to recap phase."""
+    """Generate lesson introduction with objectives and hand control to recap phase."""
     print("-----------intro_node-----------")
     print(f"[intro_node] start state: {state}")
+    
+    # Generate lesson introduction message with objectives
+    objectives = state.get("objectives_to_teach", [])
+    node_title = state.get("node_title", "Learning Session")
+    
+    if objectives:
+        # Create a nicely formatted introduction with objectives
+        intro_content = f"# 🎓 **Welcome to: {node_title}**\n\n"
+        intro_content += "## 📚 **In this lesson, you will learn:**\n\n"
+        
+        for obj in objectives:
+            intro_content += f"• {obj.description}\n"
+        
+        intro_content += "\n**Let's begin your learning journey!** 🚀\n\n"
+        intro_content += "I'm here to guide you through each of these objectives step by step. Are you ready to start?"
+    else:
+        # Fallback for sessions without objectives
+        intro_content = f"# 🎓 **Welcome to: {node_title}**\n\nLet's begin this learning session! I'm here to guide you through the material."
     
     # Don't mutate state - return new state object
     return {
         **state,
-        "history": state.get("history", []) + [{"role": "assistant", "content": "Hello world!"}],
+        "history": state.get("history", []) + [{"role": "assistant", "content": intro_content}],
         "current_phase": "recap",
         'navigate_without_user_interaction': True
     }
