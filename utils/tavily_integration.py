@@ -160,9 +160,9 @@ def search_educational_image(concept: str, context: str = "") -> Optional[ImageR
         client = get_tavily_client()
         results = client.search_educational_images(concept, context, max_results=1)
         return results[0] if results else None
-    except ValueError as e:
+    except ValueError:
         # Re-raise ValueError (like missing API key) so caller can handle it appropriately
-        raise e
+        raise
     except Exception as e:
         logger.error(f"Error in educational image search: {e}")
         return None
