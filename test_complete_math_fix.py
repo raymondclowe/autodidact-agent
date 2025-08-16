@@ -8,46 +8,9 @@ import streamlit as st
 from components.speech_controls import create_speech_enabled_markdown
 
 # Include MathJax setup from app.py
-from components.simple_math_renderer import MATH_RENDERER_JS
+from utils.math_utils import inject_math_rendering_support
 
-st.components.v1.html(f"""
-<script>
-window.MathJax = {{
-  tex: {{
-    inlineMath: [['\\\\(', '\\\\)']],
-    displayMath: [['\\\\[', '\\\\]']],
-    processEscapes: true,
-    processEnvironments: true
-  }},
-  options: {{
-    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-  }},
-  startup: {{
-    ready: function () {{
-      MathJax.startup.defaultReady();
-      console.log('MathJax is ready and initialized');
-      window.mathJaxReady = true;
-    }}
-  }}
-}};
-
-// Load MathJax with fallback
-(function() {{
-  var script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-  script.async = true;
-  script.onload = function() {{
-    console.log('MathJax script loaded successfully');
-  }};
-  script.onerror = function() {{
-    console.log('MathJax CDN failed, using fallback renderer');
-  }};
-  document.head.appendChild(script);
-}})();
-</script>
-
-{MATH_RENDERER_JS}
-""", height=50, scrolling=False)
+inject_math_rendering_support()
 
 def test_math_fix():
     """Test the exact scenario from the issue report."""

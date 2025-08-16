@@ -3,7 +3,7 @@ Simple client-side math renderer for basic LaTeX expressions
 as a fallback when MathJax CDN is not available.
 """
 
-MATH_RENDERER_JS = """
+MATH_RENDERER_JS = r"""
 <script>
 // Simple math renderer for basic LaTeX expressions
 window.SimpleMathRenderer = {
@@ -83,18 +83,23 @@ window.SimpleMathRenderer = {
     },
     
     // Process all math expressions on the page
-    processPage: function() {
+    processPage: function(options = {}) {
+        const doc = options.context || document;
+        const displayStyle = options.displayStyle || 'display: block; text-align: center; margin: 10px 0; font-style: italic; font-weight: bold;';
+        const inlineStyle = options.inlineStyle || 'font-style: italic;';
+        
         console.log('Processing page with SimpleMathRenderer...');
         
         // Find all display math [expression]
-        let displayMath = document.querySelectorAll('p, div, span');
+        let displayMath = doc.querySelectorAll('p, div, span');
         displayMath.forEach(function(element) {
             let content = element.innerHTML;
             if (content.includes('[') && content.includes(']')) {
                 // Replace display math expressions
                 content = content.replace(/\[([^[\]]+)\]/g, function(match, expr) {
+                    if (!expr.includes('\\\\')) return match; // Return original if no LaTeX commands
                     let rendered = SimpleMathRenderer.renderExpression(expr);
-                    return '<span style="display: block; text-align: center; margin: 10px 0; font-style: italic; font-weight: bold;">' + rendered + '</span>';
+                    return '<span style="' + displayStyle + '">' + rendered + '</span>';
                 });
                 element.innerHTML = content;
             }
@@ -105,7 +110,7 @@ window.SimpleMathRenderer = {
                 content = content.replace(/\(([^()]*\\\\[^()]*[^()]*)\)/g, function(match, expr) {
                     if (expr.includes('\\\\')) { // Only process if it contains LaTeX
                         let rendered = SimpleMathRenderer.renderExpression(expr);
-                        return '<span style="font-style: italic;">' + rendered + '</span>';
+                        return '<span style="' + inlineStyle + '">' + rendered + '</span>';
                     }
                     return match;
                 });
@@ -120,10 +125,10 @@ window.SimpleMathRenderer = {
 // Auto-process the page when it loads
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(SimpleMathRenderer.processPage, 100);
+        setTimeout(function() { SimpleMathRenderer.processPage(); }, 100);
     });
 } else {
-    setTimeout(SimpleMathRenderer.processPage, 100);
+    setTimeout(function() { SimpleMathRenderer.processPage(); }, 100);
 }
 </script>
 """

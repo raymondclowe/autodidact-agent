@@ -179,35 +179,11 @@ def create_speech_enabled_markdown(text: str, add_button: bool = True, auto_spea
                 console.log('Using SimpleMathRenderer fallback in current context...');
                 // Process content in parent window
                 if (window.parent && window.parent.document) {{
-                    const parentDoc = window.parent.document;
-                    
-                    // Find and process math expressions in parent document
-                    let displayMath = parentDoc.querySelectorAll('p, div, span');
-                    displayMath.forEach(function(element) {{
-                        let content = element.innerHTML;
-                        if (content.includes('[') && content.includes(']')) {{
-                            // Replace display math expressions
-                            content = content.replace(/\[([^[\]]+)\]/g, function(match, expr) {{
-                                let rendered = window.SimpleMathRenderer.renderExpression(expr);
-                                return '<span style="display: block; text-align: center; margin: 10px 0; font-style: italic; font-weight: bold; color: #2E5090;">' + rendered + '</span>';
-                            }});
-                            element.innerHTML = content;
-                        }}
-                        
-                        // Replace inline math expressions (expression)
-                        content = element.innerHTML;
-                        if (content.includes('(') && content.includes(')')) {{
-                            content = content.replace(/\(([^()]*\\\\[^()]*[^()]*)\)/g, function(match, expr) {{
-                                if (expr.includes('\\\\')) {{ // Only process if it contains LaTeX
-                                    let rendered = window.SimpleMathRenderer.renderExpression(expr);
-                                    return '<span style="font-style: italic; color: #2E5090;">' + rendered + '</span>';
-                                }}
-                                return match;
-                            }});
-                            element.innerHTML = content;
-                        }}
+                    window.SimpleMathRenderer.processPage({{
+                        context: window.parent.document,
+                        displayStyle: 'display: block; text-align: center; margin: 10px 0; font-style: italic; font-weight: bold; color: #2E5090;',
+                        inlineStyle: 'font-style: italic; color: #2E5090;'
                     }});
-                    
                     console.log('Fallback math rendering completed on parent document');
                 }} else {{
                     console.log('Cannot access parent document for math rendering');
