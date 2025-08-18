@@ -164,5 +164,5 @@ def display_about_study_notes():
     """)
 
 
-if __name__ == "__main__":
-    main()
+# Call main function when page is loaded
+main()
