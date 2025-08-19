@@ -1,6 +1,15 @@
 """
 JSXGraph utilities for creating interactive mathematical diagrams in lessons.
 Provides helper functions and templates for common STEM visualizations.
+
+IMPORTANT: This module handles the container ID consistency fix for Issue #101.
+Custom JSXGraph code from AI tutors is automatically processed to ensure that:
+- HTML container IDs match JavaScript board initialization IDs  
+- No duplicate board initializations occur
+- Board variable references are properly handled
+
+AI tutors can generate JSXGraph code with or without initBoard calls, and the
+system will ensure everything works correctly.
 """
 
 def get_jsxgraph_header() -> str:
