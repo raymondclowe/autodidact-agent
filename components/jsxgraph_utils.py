@@ -12,16 +12,25 @@ AI tutors can generate JSXGraph code with or without initBoard calls, and the
 system will ensure everything works correctly.
 """
 
+"""
+JSXGraph utilities for creating interactive mathematical diagrams in lessons.
+Provides helper functions and templates for common STEM visualizations.
+"""
+
+from utils.static_assets import get_jsxgraph_assets
+
 def get_jsxgraph_header() -> str:
     """
     Get the required HTML header for JSXGraph including CSS and JavaScript.
+    Uses local JSXGraph files when available, with CDN fallback.
     
     Returns:
-        HTML string with JSXGraph CDN includes
+        HTML string with JSXGraph CSS and JavaScript includes
     """
-    return """
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" />
-<script type="text/javascript" charset="UTF-8" src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+    css_content, js_content = get_jsxgraph_assets()
+    return f"""
+{css_content}
+{js_content}
 """
 
 
