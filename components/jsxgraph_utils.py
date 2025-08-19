@@ -297,7 +297,7 @@ def create_custom_diagram(graph_id: str, jsxgraph_code: str) -> str:
     processed_code = _process_custom_jsxgraph_code(graph_id, jsxgraph_code)
     
     # Check if the custom code already contains board initialization
-    has_init_board = 'initBoard(' in processed_code
+    has_init_board = re.search(r'\binitBoard\s*\(', processed_code)
     
     if has_init_board:
         # Custom code handles its own board initialization
