@@ -348,18 +348,6 @@ with st.container():
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# Import lesson components for progress tracking and completion
-from components.lesson_progress import display_lesson_progress_sidebar, should_show_progress_tracking  
-from components.lesson_completion import display_session_completion_summary, should_show_completion_summary
-
-# Display progress tracking in sidebar (only during active sessions)
-if not is_completed and should_show_progress_tracking(st.session_state.get('graph_state', {})):
-    display_lesson_progress_sidebar(st.session_state.get('graph_state', {}))
-
-# Display completion summary for completed sessions  
-if is_completed and should_show_completion_summary(st.session_state.get('graph_state', {})):
-    display_session_completion_summary(st.session_state.get('graph_state', {}), node_info)
-
 # Display chat messages from history on app rerun
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
