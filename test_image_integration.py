@@ -115,7 +115,7 @@ class TestTavilyIntegration(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result.url, "https://example.com/test.jpg")
         mock_client.search_educational_images.assert_called_once_with(
-            "test concept", "test context", max_results=1
+            "test concept", "test context", max_results=1, validate_urls=True
         )
 
 
