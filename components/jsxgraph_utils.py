@@ -225,6 +225,52 @@ def get_available_templates() -> dict:
     return {name: template["description"] for name, template in JSXGRAPH_TEMPLATES.items()}
 
 
+def _process_custom_jsxgraph_code(graph_id: str, jsxgraph_code: str) -> str:
+    """
+    Process custom JSXGraph code to ensure proper board and container ID handling.
+    
+    Args:
+        graph_id: The expected graph/container ID
+        jsxgraph_code: Raw JSXGraph JavaScript code
+        
+    Returns:
+        Processed JavaScript code with normalized board references and container IDs
+    """
+    import re
+    
+    processed_code = jsxgraph_code
+    
+    # First, normalize any initBoard calls to use the correct container ID
+    # Pattern: JXG.JSXGraph.initBoard('any_id', {
+    initboard_pattern = r"JXG\.JSXGraph\.initBoard\(\s*['\"]([^'\"]*)['\"]"
+    
+    def replace_initboard_id(match):
+        # Replace the container ID in initBoard calls with the correct graph_id
+        return f"JXG.JSXGraph.initBoard('{graph_id}'"
+    
+    processed_code = re.sub(initboard_pattern, replace_initboard_id, processed_code)
+    
+    # Now handle board variable references
+    # Replace 'board' with 'board_{graph_id}' but be careful about existing board_{graph_id} references
+    
+    # First, protect existing board_{graph_id} references by temporarily replacing them
+    temp_placeholder = f"TEMP_BOARD_REF_{graph_id}_PLACEHOLDER"
+    processed_code = processed_code.replace(f'board_{graph_id}', temp_placeholder)
+    
+    # Replace standalone 'board' references with 'board_{graph_id}'
+    # Use word boundaries to avoid replacing parts of other words
+    board_pattern = r'\bboard\b'
+    processed_code = re.sub(board_pattern, f'board_{graph_id}', processed_code)
+    
+    # Restore the protected board_{graph_id} references
+    processed_code = processed_code.replace(temp_placeholder, f'board_{graph_id}')
+    
+    # Fix any over-replacement issues (like board_{graph_id}_ -> board_)
+    processed_code = processed_code.replace(f'board_{graph_id}_', 'board_')
+    
+    return processed_code
+
+
 def create_custom_diagram(graph_id: str, jsxgraph_code: str) -> str:
     """
     Create a custom JSXGraph diagram from raw JavaScript code.
@@ -238,11 +284,22 @@ def create_custom_diagram(graph_id: str, jsxgraph_code: str) -> str:
     """
     container = create_jsxgraph_container(graph_id)
     
-    # Replace 'board' references with the specific board ID
-    processed_code = jsxgraph_code.replace('board', f'board_{graph_id}')
-    processed_code = processed_code.replace(f'board_{graph_id}_', 'board_')  # Fix over-replacement
+    # Process the custom code to handle board initialization properly
+    processed_code = _process_custom_jsxgraph_code(graph_id, jsxgraph_code)
     
-    custom_code = f"""
+    # Check if the custom code already contains board initialization
+    has_init_board = 'initBoard(' in processed_code
+    
+    if has_init_board:
+        # Custom code handles its own board initialization
+        custom_code = f"""
+<script>
+{processed_code}
+</script>
+"""
+    else:
+        # Add default board initialization for custom code that doesn't have it
+        custom_code = f"""
 <script>
 var board_{graph_id} = JXG.JSXGraph.initBoard('{graph_id}', {{
     boundingbox: [-6, 6, 6, -6],
