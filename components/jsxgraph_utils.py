@@ -260,22 +260,10 @@ def _process_custom_jsxgraph_code(graph_id: str, jsxgraph_code: str) -> str:
     processed_code = re.sub(initboard_pattern, replace_initboard_id, processed_code)
     
     # Now handle board variable references
-    # Replace 'board' with 'board_{graph_id}' but be careful about existing board_{graph_id} references
-    
-    # First, protect existing board_{graph_id} references by temporarily replacing them
-    temp_placeholder = f"TEMP_BOARD_REF_{graph_id}_PLACEHOLDER"
-    processed_code = processed_code.replace(f'board_{graph_id}', temp_placeholder)
-    
-    # Replace standalone 'board' references with 'board_{graph_id}'
-    # Use word boundaries to avoid replacing parts of other words
+    # Replace 'board' with 'board_{graph_id}' using word boundaries 
+    # to avoid replacing parts of other words (e.g., 'dashboard').
     board_pattern = r'\bboard\b'
     processed_code = re.sub(board_pattern, f'board_{graph_id}', processed_code)
-    
-    # Restore the protected board_{graph_id} references
-    processed_code = processed_code.replace(temp_placeholder, f'board_{graph_id}')
-    
-    # Fix any over-replacement issues (like board_{graph_id}_ -> board_)
-    processed_code = processed_code.replace(f'board_{graph_id}_', 'board_')
     
     return processed_code
 
