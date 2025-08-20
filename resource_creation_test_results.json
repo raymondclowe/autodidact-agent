@@ -1,0 +1,540 @@
+{
+  "test_summary": {
+    "total_tests": 11,
+    "passed_tests": 4,
+    "overall_pass_rate": 0.36363636363636365
+  },
+  "test_results": [
+    {
+      "scenario": {
+        "description": "Basic algebra equation solving",
+        "user_input": "Can you help me solve the equation 2x + 5 = 13?",
+        "expected_resource_types": [
+          "latex_math"
+        ],
+        "educational_context": "Student learning basic algebra",
+        "subject_area": "mathematics",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.5215000000000001,
+      "passed": false,
+      "ai_decision_simulation": {
+        "latex_math": 0.4600000000000001,
+        "jsxgraph_diagram": 0.47000000000000003,
+        "tavily_image": 0.2
+      },
+      "recommendations": [
+        "Improve guidance for mathematics scenarios",
+        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices"
+      ],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Quadratic functions with graphing",
+        "user_input": "I need to understand quadratic functions. Can you show me how y = x\u00b2 + 2x - 3 looks graphically?",
+        "expected_resource_types": [
+          "jsxgraph_diagram",
+          "latex_math"
+        ],
+        "educational_context": "Student learning quadratic functions",
+        "subject_area": "mathematics",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.5035,
+      "passed": false,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.7271428571428571,
+        "tavily_image": 0.33333333333333337
+      },
+      "recommendations": [
+        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
+      ],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Trigonometry with triangle visualization",
+        "user_input": "Can you show me a triangle diagram to help understand sine and cosine?",
+        "expected_resource_types": [
+          "jsxgraph_diagram"
+        ],
+        "educational_context": "Student learning trigonometry",
+        "subject_area": "mathematics",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.7379999999999999,
+      "passed": true,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.7271428571428571,
+        "tavily_image": 0.33333333333333337
+      },
+      "recommendations": [],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Calculus derivatives with interactive exploration",
+        "user_input": "I want to see how changing the function affects its derivative. Can you make an interactive graph?",
+        "expected_resource_types": [
+          "jsxgraph_diagram",
+          "latex_math"
+        ],
+        "educational_context": "Student learning calculus",
+        "subject_area": "mathematics",
+        "difficulty_level": "college"
+      },
+      "overall_score": 0.5485,
+      "passed": false,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.8557142857142856,
+        "tavily_image": 0.33333333333333337
+      },
+      "recommendations": [
+        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
+      ],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Cell structure (should prefer images)",
+        "user_input": "Can you show me what a plant cell looks like with all its organelles labeled?",
+        "expected_resource_types": [
+          "tavily_image"
+        ],
+        "educational_context": "Student learning cell biology",
+        "subject_area": "biology",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.7996666666666667,
+      "passed": true,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.2,
+        "tavily_image": 0.7866666666666668
+      },
+      "recommendations": [],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Physics wave motion (should prefer interactive)",
+        "user_input": "I want to understand how frequency affects wave motion. Can you show me an interactive demonstration?",
+        "expected_resource_types": [
+          "jsxgraph_diagram"
+        ],
+        "educational_context": "Student learning wave physics",
+        "subject_area": "physics",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.6479999999999999,
+      "passed": false,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.5985714285714285,
+        "tavily_image": 0.33333333333333337
+      },
+      "recommendations": [
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Improve guidance for physics scenarios"
+      ],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Chemical equations (LaTeX preferred)",
+        "user_input": "Help me balance this chemical equation: H\u2082 + O\u2082 \u2192 H\u2082O",
+        "expected_resource_types": [
+          "latex_math"
+        ],
+        "educational_context": "Student learning chemistry",
+        "subject_area": "chemistry",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.40950000000000003,
+      "passed": false,
+      "ai_decision_simulation": {
+        "latex_math": 0.30000000000000004,
+        "jsxgraph_diagram": 0.47000000000000003,
+        "tavily_image": 0.2
+      },
+      "recommendations": [
+        "Improve guidance for chemistry scenarios",
+        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices"
+      ],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Historical timeline visualization",
+        "user_input": "Can you show me a timeline of major events in World War II?",
+        "expected_resource_types": [
+          "tavily_image"
+        ],
+        "educational_context": "Student learning world history",
+        "subject_area": "history",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.7063333333333333,
+      "passed": true,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.2,
+        "tavily_image": 0.6533333333333333
+      },
+      "recommendations": [],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Ancient architecture",
+        "user_input": "I want to see what the Parthenon in Athens looked like in ancient times",
+        "expected_resource_types": [
+          "tavily_image"
+        ],
+        "educational_context": "Student learning ancient history",
+        "subject_area": "history",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.7063333333333333,
+      "passed": true,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.2,
+        "tavily_image": 0.6533333333333333
+      },
+      "recommendations": [],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Statistics with data visualization",
+        "user_input": "Can you help me create a histogram to visualize this data set and explain the mean?",
+        "expected_resource_types": [
+          "jsxgraph_diagram",
+          "latex_math"
+        ],
+        "educational_context": "Student learning statistics",
+        "subject_area": "mathematics",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.49849999999999994,
+      "passed": false,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.5985714285714285,
+        "tavily_image": 0.2
+      },
+      "recommendations": [
+        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
+      ],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "description": "Geometric proof with diagram",
+        "user_input": "I need help proving that the angles in a triangle sum to 180 degrees. Can you show me visually?",
+        "expected_resource_types": [
+          "jsxgraph_diagram",
+          "latex_math"
+        ],
+        "educational_context": "Student learning geometry proofs",
+        "subject_area": "mathematics",
+        "difficulty_level": "high_school"
+      },
+      "overall_score": 0.4584999999999999,
+      "passed": false,
+      "ai_decision_simulation": {
+        "latex_math": 0.13999999999999999,
+        "jsxgraph_diagram": 0.5985714285714285,
+        "tavily_image": 0.33333333333333337
+      },
+      "recommendations": [
+        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
+      ],
+      "prompt_analyses": [
+        {
+          "resource_type": "latex_math",
+          "guidance_score": 0.7,
+          "clarity_score": 0.8,
+          "coverage_score": 0.8,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "jsxgraph_diagram",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        },
+        {
+          "resource_type": "tavily_image",
+          "guidance_score": 1.0,
+          "clarity_score": 1.0,
+          "coverage_score": 1.0,
+          "issues": [],
+          "recommendations": []
+        }
+      ]
+    }
+  ]
+}
