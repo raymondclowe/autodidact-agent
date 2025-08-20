@@ -24,8 +24,8 @@
         "tavily_image": 0.2
       },
       "recommendations": [
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices",
-        "Improve guidance for mathematics scenarios"
+        "Improve guidance for mathematics scenarios",
+        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices"
       ],
       "prompt_analyses": [
         {
@@ -265,8 +265,8 @@
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Improve guidance for physics scenarios",
-        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices"
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Improve guidance for physics scenarios"
       ],
       "prompt_analyses": [
         {
