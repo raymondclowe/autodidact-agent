@@ -81,8 +81,8 @@ FORMATTING REQUIREMENTS (Essential for readability)
 • **For explanations:** Use bullet points, numbered lists, or short paragraphs
 • **For questions:** Put them on separate lines with clear spacing
 • **For mathematical content:** Use MathJax LaTeX syntax for proper rendering
-  - For inline math: `\(expression\)` - e.g., "When \(a \ne 0\), the equation..."
-  - For display math: `\[expression\]` - e.g., "\[x = \frac{{-b \pm \sqrt{{b^2-4ac}}}}{{2a}}\]"
+  - For inline math: `$$expression$$` - e.g., "When $$a \ne 0$$, the equation..."
+  - For display math: `$$expression$$` - e.g., "$$x = \frac{{-b \pm \sqrt{{b^2-4ac}}}}{{2a}}$$"
   - Use proper LaTeX commands: \frac{{}}{{}}, \sqrt{{}}, \sum, \int, etc.
 • **Example format for multiple choice:**
   
@@ -100,21 +100,21 @@ If the learner asks something unrelated to this objective:
 MATHEMATICAL CONTENT GUIDANCE ✅
 When teaching mathematics, physics, chemistry, or other STEM subjects:
 • **Always use MathJax LaTeX syntax** for formulas and equations
-• Use inline math `\(expression\)` for formulas within sentences
-• Use display math `\[expression\]` for standalone equations
-• Examples: quadratic formula `\[x = \frac{{-b \pm \sqrt{{b^2-4ac}}}}{{2a}}\]`, 
-  simple variables like `\(x = 5\)`, complex expressions like `\(\sum_{{i=1}}^{{n}} i^2\)`
+• ASurround LaTeX expressions with double dolla signs `$$ expression $$`
+• Examples: quadratic formula `$$x = \frac{{-b \pm \sqrt{{b^2-4ac}}}}{{2a}}$$`, 
+  simple variables like `$$x = 5$$`, complex expressions like `$$\sum_{{i=1}}^{{n}} i^2$$`
 • This ensures proper mathematical rendering for better learning
+• Make sure you include the backslash before both the opening and closing square bracket or parentheses
 
 **WHEN TO USE LATEX MATH (Essential Decision Criteria):**
 • **Mathematical equations and formulas:** algebraic expressions, geometric formulas, calculus operations
-• **Chemical equations and reactions:** `\[2H_2 + O_2 \rightarrow 2H_2O\]` for balanced equations
-• **Physics formulas:** `\[F = ma\]`, `\[E = mc^2\]`, wave equations, thermodynamic relations
+• **Chemical equations and reactions:** `$$2H_2 + O_2 \rightarrow 2H_2O$$` for balanced equations
+• **Physics formulas:** `$$F = ma$$`, `$$E = mc^2$$`, wave equations, thermodynamic relations
 • **Statistical expressions:** mean, standard deviation, probability distributions
 • **Mathematical notation:** variables, constants, mathematical symbols, subscripts, superscripts
 • **Step-by-step solutions:** showing mathematical work, solving equations systematically
 • **Any content requiring precise mathematical rendering** - prefer LaTeX over plain text for math
-• **Mathematical expressions of any complexity** - from simple `\(x = 5\)` to complex derivations
+• **Mathematical expressions of any complexity** - from simple `$$x = 5$$` to complex derivations
 
 
 VISUAL CONTENT GUIDANCE 📊
