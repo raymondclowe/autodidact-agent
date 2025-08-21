@@ -138,7 +138,7 @@ For mathematics, physics, and other STEM subjects, **PRIORITIZE interactive diag
 • No generic images with mismatched labels
 
 **JSXGraph SYNTAX OPTIONS:**
-1. **Template approach** (limited): `<jsxgraph>triangle:unique_id</jsxgraph>` - Only one template available
+1. **Template approach** (simple predefined diagrams): e.g. `<jsxgraph>triangle:unique_id</jsxgraph>`, `<jsxgraph>axes:unique_id</jsxgraph>`, `<jsxgraph>unitcircle:unique_id</jsxgraph>` (templates kept intentionally lightweight; prefer custom when in doubt)
 2. **Direct JSXGraph code** (flexible): `<jsxgraph>custom:unique_id</jsxgraph>` followed by the JSXGraph JavaScript
 
 **AVAILABLE TEMPLATE:**

@@ -227,9 +227,14 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 # Display chat messages from history on app rerun
+from components.rich_content_renderer import render_rich_content
+
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        if message["role"] == "assistant":
+            render_rich_content(message["content"])
+        else:
+            st.markdown(message["content"])
 
     # Handle initial message generation
 if not is_completed and len(st.session_state.history) == 0:
@@ -247,7 +252,7 @@ if not is_completed and len(st.session_state.history) == 0:
                 for msg in new_messages:
                     if msg["role"] == "assistant":
                         print(f"msg to be shown: {msg['content']}")
-                        st.markdown(msg["content"])
+                        render_rich_content(msg["content"])
             else:
                 st.error(f"❌ Failed to start session: {result['error']} {result}")
 
@@ -276,7 +281,7 @@ if not is_completed:
                     for msg in new_messages:
                         if msg["role"] == "assistant":
                             print(f"msg to be shown: {msg['content']}")
-                            st.markdown(msg["content"])
+                            render_rich_content(msg["content"])
                     print(f"result: {result}")
                     print(f"st.session_state.history: {st.session_state.history}")
                     # Check if session is completed
