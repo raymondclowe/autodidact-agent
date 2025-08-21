@@ -106,6 +106,16 @@ When teaching mathematics, physics, chemistry, or other STEM subjects:
   simple variables like `\(x = 5\)`, complex expressions like `\(\sum_{{i=1}}^{{n}} i^2\)`
 • This ensures proper mathematical rendering for better learning
 
+**WHEN TO USE LATEX MATH (Essential Decision Criteria):**
+• **Mathematical equations and formulas:** algebraic expressions, geometric formulas, calculus operations
+• **Chemical equations and reactions:** `\[2H_2 + O_2 \rightarrow 2H_2O\]` for balanced equations
+• **Physics formulas:** `\[F = ma\]`, `\[E = mc^2\]`, wave equations, thermodynamic relations
+• **Statistical expressions:** mean, standard deviation, probability distributions
+• **Mathematical notation:** variables, constants, mathematical symbols, subscripts, superscripts
+• **Step-by-step solutions:** showing mathematical work, solving equations systematically
+• **Any content requiring precise mathematical rendering** - prefer LaTeX over plain text for math
+• **Mathematical expressions of any complexity** - from simple `\(x = 5\)` to complex derivations
+
 
 VISUAL CONTENT GUIDANCE 📊
 For educational visual content, choose the most appropriate approach:
