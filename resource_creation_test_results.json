@@ -71,8 +71,8 @@
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Improve guidance for mathematics scenarios",
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices"
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>, <ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
       ],
       "prompt_analyses": [
         {
@@ -170,8 +170,8 @@
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Improve guidance for mathematics scenarios",
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices"
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>, <ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
       ],
       "prompt_analyses": [
         {
@@ -500,8 +500,8 @@
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Improve guidance for mathematics scenarios",
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices"
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>, <ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
       ],
       "prompt_analyses": [
         {
