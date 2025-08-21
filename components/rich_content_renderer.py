@@ -48,30 +48,66 @@ TEMPLATE_BUILDERS = {
     "unitcircle": _template_unitcircle,
 }
 
+def _iframe_wrapper(inner_html: str) -> str:
+    """Wrap provided HTML snippet in a full HTML document for iframe rendering.
+
+    Each Streamlit component is its own iframe with an isolated DOM. We must
+    include JSXGraph assets inside EVERY iframe; injecting them into the parent
+    page won't expose JXG to the sandboxed iframe.
+    """
+    css_content, js_content = get_jsxgraph_assets()
+    return f"""
+<html>
+<head>
+{css_content}
+{js_content}
+</head>
+<body style='margin:0;padding:0;'>
+{inner_html}
+</body>
+</html>
+""".strip()
+
 def _generate_template_script(template: str, diagram_id: str) -> str:
     container_id = f"board_{diagram_id}"
     board_var = "board"
     body_builder = TEMPLATE_BUILDERS.get(template)
     body_code = body_builder(board_var) if body_builder else "/* Unknown template */"
-    return f"""<div id=\"{container_id}\" style=\"width:400px;height:300px;margin:10px auto;border:1px solid #ccc;\"></div>
-<script>(function() {{ if (typeof JXG==='undefined'||!JXG.JSXGraph) return; var {board_var}=JXG.JSXGraph.initBoard('{container_id}', {{boundingbox:[-5,5,5,-5],axis:true,showNavigation:true,showZoom:true}}); {body_code} }})();</script>"""
+    snippet = f"""<div id=\"{container_id}\" style=\"width:400px;height:300px;margin:10px auto;border:1px solid #ccc;\"></div>
+<script>(function() {{
+    function init(retries) {{
+        if (typeof JXG==='undefined' || !JXG.JSXGraph) {{
+                if (retries > 0) return setTimeout(function(){{init(retries-1);}}, 60);
+                console.error('JSXGraph library not loaded');
+                return;
+        }}
+        try {{
+                var {board_var}=JXG.JSXGraph.initBoard('{container_id}', {{boundingbox:[-5,5,5,-5],axis:true,showNavigation:true,showZoom:true}});
+                {body_code}
+        }} catch(e) {{ console.error('JSXGraph template init error', e); }}
+    }}
+    init(40); // ~2.4s max
+}})();</script>"""
+    return _iframe_wrapper(snippet)
 
 def _wrap_custom_code(diagram_id: str, code_js: str) -> str:
     container_id = f"board_{diagram_id}"
     needs_board = "initBoard(" not in code_js
     default_board = f"var board = JXG.JSXGraph.initBoard('{container_id}', {{boundingbox:[-5,5,5,-5],axis:true,showNavigation:true,showZoom:true}});\n" if needs_board else ""
     sanitized = re.sub(r"</?script[^>]*>", "", code_js, flags=re.IGNORECASE)
-    return f"""
-<div id=\"{container_id}\" style=\"width:400px;height:300px;margin:10px auto;border:1px solid #ccc;\"></div>
-<script>
-(function() {{
-  try {{
-    {default_board}
-    {sanitized}
-  }} catch(e) {{ console.error('JSXGraph custom diagram error', e); }}
-}})();
-</script>
-""".strip()
+    snippet = f"""<div id=\"{container_id}\" style=\"width:400px;height:300px;margin:10px auto;border:1px solid #ccc;\"></div>
+<script>(function() {{
+    function init(retries) {{
+        if (typeof JXG==='undefined' || !JXG.JSXGraph) {{
+                if (retries > 0) return setTimeout(function(){{init(retries-1);}}, 60);
+                console.error('JSXGraph library not loaded for custom diagram');
+                return;
+        }}
+        try {{ {default_board}{sanitized} }} catch(e) {{ console.error('JSXGraph custom diagram error', e); }}
+    }}
+    init(40);
+}})();</script>"""
+    return _iframe_wrapper(snippet)
 
 def _extract_custom_code(lines: List[str], start_index: int) -> Tuple[str, int]:
     """Extract fenced code block (``` ... ```) starting after start_index.
@@ -96,8 +132,7 @@ def _render_segments_with_jsxgraph(content: str) -> None:
     lines = content.splitlines()
     buffer: List[str] = []
     i = 0
-    header_injected = False
-    css_content, js_content = get_jsxgraph_assets()
+    # No global header injection; each component iframe loads assets itself.
 
     while i < len(lines):
         line = lines[i]
@@ -107,10 +142,6 @@ def _render_segments_with_jsxgraph(content: str) -> None:
                 st.markdown("\n".join(buffer), unsafe_allow_html=True)
                 buffer.clear()
             kind, diag_id = tag_match.groups()
-            if not header_injected:
-                st.markdown(css_content, unsafe_allow_html=True)
-                st.markdown(js_content, unsafe_allow_html=True)
-                header_injected = True
             diagram_html = ""
             if kind in TEMPLATE_BUILDERS:
                 diagram_html = _generate_template_script(kind, diag_id)
