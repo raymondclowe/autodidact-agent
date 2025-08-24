@@ -211,7 +211,7 @@ class ResourceCreationHarness:
         latex_mentions = len(re.findall(r'\\[(\[]', self.prompt_template))
         has_latex_examples = latex_mentions > 0
         
-        # Check for math formatting guidance
+        # Check for math formatting guidance  
         math_keywords = ['equation', 'formula', 'mathematical expression', 'latex', 'mathjax']
         math_guidance_score = sum(1 for keyword in math_keywords 
                                 if keyword.lower() in self.prompt_template.lower()) / len(math_keywords)
@@ -343,16 +343,44 @@ class ResourceCreationHarness:
         user_text = scenario.user_input.lower()
         subject = scenario.subject_area.lower()
         
-        # LaTeX Math probability
-        math_keywords = ['equation', 'solve', 'formula', 'calculate', 'expression']
+        # LaTeX Math probability - enhanced keyword detection
+        math_keywords = ['equation', 'solve', 'formula', 'calculate', 'expression', 'balance', 'reaction', 'chemical', 'algebra', 'derivative', 'integral', 'coefficient', 'mean', 'median', 'mode', 'histogram', 'distribution', 'standard deviation', 'probability', 'statistics']
         math_score = sum(1 for keyword in math_keywords if keyword in user_text) / len(math_keywords)
-        probabilities[ResourceType.LATEX_MATH] = min(math_score * 0.8, 0.9)
         
-        # JSXGraph probability  
-        interactive_keywords = ['graph', 'visualize', 'interactive', 'diagram', 'explore', 'triangle', 'function']
+        # Special boost for formula-specific queries and calculations
+        formula_boost = 0.3 if 'formula' in user_text else 0
+        calculate_boost = 0.2 if 'calculate' in user_text else 0
+        
+        # Reduce LaTeX probability if clearly asking for visual/interactive content only
+        visual_keywords = ['show me', 'diagram', 'interactive', 'explore', 'see']
+        visual_penalty = sum(1 for keyword in visual_keywords if keyword in user_text) * 0.1
+        
+        # Special case: if asking for both visualization AND explanation of mathematical concepts, both should be high
+        dual_intent = ('visualize' in user_text and any(kw in user_text for kw in ['mean', 'explain', 'understand']))
+        
+        # Strong subject-specific bonuses for mathematical contexts, reduced only if purely visual
+        subject_boost = 0
+        if subject in ['mathematics', 'algebra', 'calculus', 'geometry', 'trigonometry']:
+            subject_boost = max(0.4 - (visual_penalty if not dual_intent else 0), 0.1)
+        elif subject in ['chemistry', 'physics']:
+            subject_boost = max(0.3 - (visual_penalty if not dual_intent else 0), 0.1)
+        elif subject in ['statistics', 'probability']:
+            subject_boost = max(0.35 - (visual_penalty if not dual_intent else 0), 0.2)
+            
+        # Bonus for mathematical notation patterns
+        notation_bonus = 0.2 if any(char in scenario.user_input for char in ['=', '+', '-', '×', '²', '₂']) else 0
+        
+        probabilities[ResourceType.LATEX_MATH] = min((math_score * 0.6 + subject_boost + notation_bonus + formula_boost + calculate_boost), 0.95)
+        
+        # JSXGraph probability - enhanced for visualization scenarios
+        interactive_keywords = ['graph', 'visualize', 'interactive', 'diagram', 'explore', 'triangle', 'function', 'histogram', 'plot']
         interactive_score = sum(1 for keyword in interactive_keywords if keyword in user_text) / len(interactive_keywords)
         stem_bonus = 0.3 if subject in ['mathematics', 'physics', 'chemistry'] else 0
-        probabilities[ResourceType.JSXGRAPH_DIAGRAM] = min((interactive_score + stem_bonus) * 0.9, 0.95)
+        
+        # Extra boost for data visualization scenarios
+        dataviz_boost = 0.1 if any(term in user_text for term in ['histogram', 'chart', 'plot', 'graph']) else 0
+        
+        probabilities[ResourceType.JSXGRAPH_DIAGRAM] = min((interactive_score + stem_bonus + dataviz_boost) * 0.9, 0.95)
         
         # Tavily Image probability
         image_keywords = ['show me', 'what does', 'looks like', 'picture', 'image', 'see']
