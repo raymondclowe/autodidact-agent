@@ -40,7 +40,8 @@ def extract_multiple_choice_options(question: str) -> List[Tuple[str, str]]:
     options = []
     
     # Try numbered pattern first
-    numbered_matches = re.finditer(r'(\d+)\.\s+(.+?)(?=\n\d+\.|$)', question, re.MULTILINE)
+    # Handle both newline-separated and inline options
+    numbered_matches = re.finditer(r'(\d+)\.\s+(.+?)(?=\s+\d+\.|$)', question, re.MULTILINE)
     for match in numbered_matches:
         choice_key = match.group(1)
         choice_text = match.group(2).strip()
@@ -50,7 +51,8 @@ def extract_multiple_choice_options(question: str) -> List[Tuple[str, str]]:
         return options
     
     # Try lettered pattern
-    lettered_matches = re.finditer(r'([A-Za-z])[\.\)]\s+(.+?)(?=\n[A-Za-z][\.\)]|$)', question, re.MULTILINE)
+    # Handle both newline-separated and inline options
+    lettered_matches = re.finditer(r'([A-Za-z])[\.\)]\s+(.+?)(?=\s+[A-Za-z][\.\)]|$)', question, re.MULTILINE)
     for match in lettered_matches:
         choice_key = match.group(1).upper()  # Normalize to uppercase
         choice_text = match.group(2).strip()

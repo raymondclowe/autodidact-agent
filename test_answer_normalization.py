@@ -72,6 +72,12 @@ C. Third choice"""
         options = extract_multiple_choice_options(question)
         expected = [('1', 'Cow'), ('2', 'Moon'), ('3', 'Star')]
         self.assertEqual(options, expected)
+        
+        # Test inline format too
+        question_inline = "Choose: 1. Apple 2. Orange"
+        options_inline = extract_multiple_choice_options(question_inline)
+        expected_inline = [('1', 'Apple'), ('2', 'Orange')]
+        self.assertEqual(options_inline, expected_inline)
     
     def test_extract_lettered_options(self):
         """Test extraction of lettered options"""
