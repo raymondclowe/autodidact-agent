@@ -40,13 +40,13 @@ def create_jsxgraph_container(graph_id: str, width: int = 400, height: int = 300
     
     Args:
         graph_id: Unique identifier for the graph
-        width: Width in pixels
+        width: Width in pixels (max width, will be responsive on mobile)
         height: Height in pixels
         
     Returns:
-        HTML div element for JSXGraph
+        HTML div element for JSXGraph with responsive width
     """
-    return f'<div id="{graph_id}" style="width: {width}px; height: {height}px; margin: 10px auto; border: 1px solid #ccc;"></div>'
+    return f'<div id="{graph_id}" style="width: 100%; max-width: {width}px; height: {height}px; margin: 10px auto; border: 1px solid #ccc;"></div>'
 
 
 def create_basic_coordinate_system(graph_id: str, x_min: float = -5, x_max: float = 5, 
