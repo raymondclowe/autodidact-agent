@@ -171,7 +171,7 @@ def session_info_dialog():
 
 # optional local pickle store (same as earlier helper but inline)
 _STORE = Path.home() / '.autodidact' / 'projects' / project_id / 'sessions'
-_STORE.mkdir(exist_ok=True)
+_STORE.mkdir(parents=True, exist_ok=True)
 
 def _load_state(session_id: str) -> SessionState | None:
     fp = _STORE / f"{session_id}.pkl"
@@ -222,12 +222,28 @@ with st.container():
         if st.button("📚 Session Info", type="secondary", use_container_width=True):
             session_info_dialog()
 
+# Reassuring message about session persistence
+if not is_completed:
+    st.info("💾 **Your progress is automatically saved** - you can safely pause and return to this session anytime!")
+
 # Initialize chat history
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # Display chat messages from history on app rerun
 from components.rich_content_renderer import render_rich_content
+from components.lesson_intro import display_lesson_introduction, should_show_lesson_intro
+from components.lesson_progress import display_lesson_progress_sidebar, should_show_progress_tracking
+
+# Display lesson introduction at session start
+if not is_completed and len(st.session_state.history) == 0 and st.session_state.get('graph_state'):
+    if should_show_lesson_intro(st.session_state.graph_state):
+        display_lesson_introduction(st.session_state.graph_state, node_info)
+
+# Display progress tracking in sidebar if session is active
+if not is_completed and st.session_state.get('graph_state'):
+    if should_show_progress_tracking(st.session_state.graph_state):
+        display_lesson_progress_sidebar(st.session_state.graph_state)
 
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
