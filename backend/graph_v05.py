@@ -26,6 +26,8 @@ from backend.session_state import (
     format_learning_objectives, format_references, calculate_final_score
 )
 
+from backend.answer_normalizer import normalize_single_character_answer
+
 from backend.session_logger import (
     log_session_start, log_session_message, log_session_event,
     log_session_end, SessionLogger
@@ -618,7 +620,13 @@ def testing_node(state: SessionState) -> SessionState:
     # Process any new user answer
     if history and history[-1]["role"] == "user" and len(answers) < len(questions):
         # User just provided an answer
-        new_answers = answers + [history[-1]["content"]]
+        raw_answer = history[-1]["content"]
+        current_question = questions[len(answers)]
+        
+        # Normalize single character answers for multiple choice questions
+        normalized_answer = normalize_single_character_answer(raw_answer, current_question)
+        
+        new_answers = answers + [normalized_answer]
         return {**state, "final_test_answers": new_answers}
 
     # Ask next question or advance to grading
