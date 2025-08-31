@@ -288,6 +288,8 @@ def create_custom_diagram(graph_id: str, jsxgraph_code: str) -> str:
     Returns:
         Complete JSXGraph HTML with custom code
     """
+    import re
+    
     container = create_jsxgraph_container(graph_id)
     
     # Process the custom code to handle board initialization properly
