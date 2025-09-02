@@ -95,6 +95,7 @@ def format_teaching_prompt(
     remaining: List[str],
     refs: List[Dict[str, Any]],
     learner_profile_context: str = "",
+    interruption_context: str = "",
 ) -> str:
     """Fill the TEACHING prompt with runtime values."""
     template = get_teaching_prompt_template()
@@ -102,13 +103,18 @@ def format_teaching_prompt(
     # Get images context
     images_context = get_images_context_for_prompt()
     
+    # Combine learner profile and interruption context
+    combined_context = learner_profile_context
+    if interruption_context:
+        combined_context += f"\n\n{interruption_context}"
+    
     return template.format(
         OBJ_ID=obj_id,
         OBJ_LABEL=obj_label,
         RECENT_TOPICS="; ".join(recent),
         REMAINING_OBJS="; ".join(remaining),
         REF_LIST_BULLETS=build_ref_list(refs),
-        LEARNER_PROFILE_CONTEXT=learner_profile_context,
+        LEARNER_PROFILE_CONTEXT=combined_context,
         VISIBLE_IMAGES_CONTEXT=images_context,
     )
 

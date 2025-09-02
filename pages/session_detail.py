@@ -67,6 +67,13 @@ def run_tutor_response(session_info, node_info):
         st.session_state.turn_count = state.get('turn_count', 0)
         st.session_state.current_phase = state.get('current_phase', 'teaching')
 
+        # Update timestamp and clear interruption flag after successful response
+        from datetime import datetime
+        state['last_message_ts'] = datetime.now(timezone.utc).isoformat()
+        if state.get('interruption_detected'):
+            state['interruption_detected'] = False
+            state['interruption_duration_minutes'] = None
+
         _save_state(state)
         
         # Return info about what happened
@@ -195,6 +202,19 @@ if state is None:
     state = create_initial_state(session_id, project_id, node_id)
     # Save initial state immediately
     _save_state(state)
+else:
+    # Check for session interruption
+    from backend.session_state import detect_session_interruption
+    was_interrupted, interruption_minutes = detect_session_interruption(state)
+    
+    if was_interrupted and not state.get("interruption_detected"):
+        # Mark the interruption and store duration
+        state["interruption_detected"] = True
+        state["interruption_duration_minutes"] = interruption_minutes
+        _save_state(state)
+        
+        # Log the interruption for debugging
+        print(f"[SESSION] Interruption detected: {interruption_minutes:.1f} minutes since last message")
 
 # Initialize st.session_state.graph_state so lesson intro and progress tracking can access it
 if 'graph_state' not in st.session_state:
@@ -281,9 +301,13 @@ if not is_completed:
     if prompt := st.chat_input("Your response..."):
         # Add user message to chat history
         st.session_state.history.append({"role": "user", "content": prompt})
-        # Save state after user input
+        
+        # Update timestamp for user message
         if 'graph_state' in st.session_state:
+            from datetime import datetime
+            st.session_state.graph_state['last_message_ts'] = datetime.now().isoformat()
             _save_state(st.session_state.graph_state)
+        
         # Display user message in chat message container
         with st.chat_message("user"):
             st.markdown(prompt)

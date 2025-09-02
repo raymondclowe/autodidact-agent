@@ -102,6 +102,10 @@ class SessionState(TypedDict, total=False):
     last_message_ts: Optional[str] #datetime str in isoformat
     session_end: Optional[str] #datetime str in isoformat
 
+    # Interruption handling
+    interruption_detected: Optional[bool]  # True if session was resumed after interruption
+    interruption_duration_minutes: Optional[float]  # How long the interruption lasted
+
     navigate_without_user_interaction: Optional[bool]
 
 
@@ -159,7 +163,11 @@ def create_initial_state(
         "turn_count": 0,
         "session_start": datetime.now().isoformat(),
         "last_message_ts": None,
-        "session_end": None
+        "session_end": None,
+        
+        # Interruption handling
+        "interruption_detected": False,
+        "interruption_duration_minutes": None
     }
 
 
@@ -247,6 +255,35 @@ def calculate_final_score(state: SessionState) -> float:
     if not state["objective_scores"]:
         return 0.0
     return sum(state["objective_scores"].values()) / len(state["objective_scores"])
+
+
+def detect_session_interruption(state: SessionState, threshold_minutes: float = 10.0) -> tuple[bool, float]:
+    """Detect if session was interrupted based on last message timestamp
+    
+    Args:
+        state: Current session state
+        threshold_minutes: Minutes of inactivity to consider an interruption
+        
+    Returns:
+        tuple of (was_interrupted, minutes_since_last_message)
+    """
+    if not state.get("last_message_ts"):
+        return False, 0.0
+    
+    try:
+        last_message_time = datetime.fromisoformat(state["last_message_ts"])
+        current_time = datetime.now(timezone.utc)
+        
+        # Calculate time difference in minutes
+        time_diff = current_time - last_message_time
+        minutes_elapsed = time_diff.total_seconds() / 60.0
+        
+        # Consider it an interruption if more than threshold minutes have passed
+        was_interrupted = minutes_elapsed >= threshold_minutes
+        return was_interrupted, minutes_elapsed
+    except (ValueError, TypeError):
+        # Invalid timestamp format
+        return False, 0.0
 
 
 def format_learning_objectives(objectives: List[Objective]) -> str:

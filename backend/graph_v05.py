@@ -271,12 +271,56 @@ def intro_node(state: SessionState) -> SessionState:
     print("-----------intro_node-----------")
     print(f"[intro_node] start state: {state}")
     
+    # Check if this is a resumed session after interruption
+    was_interrupted = state.get("interruption_detected", False)
+    interruption_minutes = state.get("interruption_duration_minutes", 0)
+    
     # Generate lesson introduction message with objectives
     objectives = state.get("objectives_to_teach", [])
     node_title = state.get("node_title", "Learning Session")
     
-    if objectives:
-        # Create a nicely formatted introduction with objectives
+    if was_interrupted and interruption_minutes > 0:
+        # Generate welcome back message for interrupted session
+        intro_content = f"# 🔄 **Welcome back to: {node_title}**\n\n"
+        
+        # Format the interruption duration nicely
+        if interruption_minutes < 60:
+            time_str = f"{interruption_minutes:.0f} minutes"
+        elif interruption_minutes < 1440:  # less than 24 hours
+            hours = interruption_minutes // 60
+            minutes = interruption_minutes % 60
+            time_str = f"{hours:.0f} hours" + (f" and {minutes:.0f} minutes" if minutes > 0 else "")
+        else:  # more than 24 hours
+            days = interruption_minutes // 1440
+            hours = (interruption_minutes % 1440) // 60
+            time_str = f"{days:.0f} days" + (f" and {hours:.0f} hours" if hours > 0 else "")
+        
+        intro_content += f"I notice you've been away for about {time_str}. No worries – let me help you get back on track! 📚\n\n"
+        
+        # Check if there's any previous progress
+        completed_objectives = state.get("completed_objectives", [])
+        if completed_objectives:
+            intro_content += "**📋 What we've covered so far:**\n"
+            for obj_id in completed_objectives:
+                # Find the objective description
+                for obj in objectives:
+                    if obj.id == obj_id:
+                        intro_content += f"✅ {obj.description}\n"
+                        break
+            intro_content += "\n"
+        
+        # Show remaining objectives
+        remaining_objectives = [obj for obj in objectives if obj.id not in completed_objectives]
+        if remaining_objectives:
+            intro_content += "**🎯 What we'll continue working on:**\n"
+            for obj in remaining_objectives:
+                intro_content += f"• {obj.description}\n"
+            intro_content += "\n"
+        
+        intro_content += "**Welcome back! Are you ready to continue where we left off?** 🚀"
+        
+    elif objectives:
+        # Create a regular introduction with objectives for new sessions
         intro_content = f"# 🎓 **Welcome to: {node_title}**\n\n"
         intro_content += "## 📚 **In this lesson, you will learn:**\n\n"
         
@@ -434,13 +478,30 @@ def teaching_node(state: SessionState) -> SessionState:
                 "current_phase": "testing",
                 'navigate_without_user_interaction': True}
 
+    # Prepare interruption context if session was resumed
+    interruption_context = ""
+    if state.get("interruption_detected"):
+        interruption_minutes = state.get("interruption_duration_minutes", 0)
+        if interruption_minutes > 0:
+            if interruption_minutes < 60:
+                time_str = f"{interruption_minutes:.0f} minutes"
+            elif interruption_minutes < 1440:  # less than 24 hours
+                hours = interruption_minutes // 60
+                time_str = f"{hours:.0f} hours"
+            else:  # more than 24 hours
+                days = interruption_minutes // 1440
+                time_str = f"{days:.0f} days"
+            
+            interruption_context = f"**SESSION INTERRUPTION CONTEXT:**\nThe student has just returned after being away for approximately {time_str}. They may need gentle reminders of what was covered and a smooth transition back into the learning flow. Be welcoming and help them reconnect with the material."
+
     sys_prompt = format_teaching_prompt(
         obj_id=current_obj.id,
         obj_label=current_obj.description,
         recent=[o.description for o in state.get("objectives_already_known", [])],
         remaining=[o.description for o in objectives[idx + 1 :]],
         refs=state.get("references_sections_resolved", []),
-        learner_profile_context=state.get("learner_profile_context", "")
+        learner_profile_context=state.get("learner_profile_context", ""),
+        interruption_context=interruption_context
     )
 
     messages = [{"role": "system", "content": sys_prompt}, *history]
