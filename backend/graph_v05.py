@@ -277,7 +277,7 @@ def intro_node(state: SessionState) -> SessionState:
     objectives = state.get("objectives_to_teach", [])
     node_title = state.get("node_title", "Learning Session")
     
-    if was_interrupted and interruption_minutes and interruption_minutes > 0:
+    if was_interrupted and interruption_minutes > 0:
         # Generate welcome back message for interrupted session
         intro_content = f"# 🔄 **Welcome back to: {node_title}**\n\n"
         
