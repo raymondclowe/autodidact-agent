@@ -196,6 +196,10 @@ if state is None:
     # Save initial state immediately
     _save_state(state)
 
+# Initialize st.session_state.graph_state so lesson intro and progress tracking can access it
+if 'graph_state' not in st.session_state:
+    st.session_state.graph_state = state
+
 # Session control buttons
 with st.container():
     col1, col2, col3 = st.columns(3)
@@ -236,7 +240,7 @@ from components.lesson_intro import display_lesson_introduction, should_show_les
 from components.lesson_progress import display_lesson_progress_sidebar, should_show_progress_tracking
 
 # Display lesson introduction at session start
-if not is_completed and len(st.session_state.history) == 0 and st.session_state.get('graph_state'):
+if not is_completed and st.session_state.get('graph_state'):
     if should_show_lesson_intro(st.session_state.graph_state):
         display_lesson_introduction(st.session_state.graph_state, node_info)
 
