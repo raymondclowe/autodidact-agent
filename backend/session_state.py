@@ -272,7 +272,7 @@ def detect_session_interruption(state: SessionState, threshold_minutes: float = 
     
     try:
         last_message_time = datetime.fromisoformat(state["last_message_ts"])
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         
         # Calculate time difference in minutes
         time_diff = current_time - last_message_time
