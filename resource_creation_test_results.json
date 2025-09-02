@@ -1,8 +1,8 @@
 {
   "test_summary": {
     "total_tests": 11,
-    "passed_tests": 4,
-    "overall_pass_rate": 0.36363636363636365
+    "passed_tests": 6,
+    "overall_pass_rate": 0.5454545454545454
   },
   "test_results": [
     {
@@ -16,22 +16,19 @@
         "subject_area": "mathematics",
         "difficulty_level": "high_school"
       },
-      "overall_score": 0.5215000000000001,
-      "passed": false,
+      "overall_score": 0.7595,
+      "passed": true,
       "ai_decision_simulation": {
-        "latex_math": 0.4600000000000001,
+        "latex_math": 0.8,
         "jsxgraph_diagram": 0.47000000000000003,
         "tavily_image": 0.2
       },
-      "recommendations": [
-        "Improve guidance for mathematics scenarios",
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices"
-      ],
+      "recommendations": [],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -66,22 +63,22 @@
         "subject_area": "mathematics",
         "difficulty_level": "high_school"
       },
-      "overall_score": 0.5035,
+      "overall_score": 0.69,
       "passed": false,
       "ai_decision_simulation": {
-        "latex_math": 0.13999999999999999,
-        "jsxgraph_diagram": 0.7271428571428571,
+        "latex_math": 0.64,
+        "jsxgraph_diagram": 0.76,
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>, <ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices",
         "Improve guidance for mathematics scenarios"
       ],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -115,19 +112,22 @@
         "subject_area": "mathematics",
         "difficulty_level": "high_school"
       },
-      "overall_score": 0.7379999999999999,
-      "passed": true,
+      "overall_score": 0.6679999999999999,
+      "passed": false,
       "ai_decision_simulation": {
-        "latex_math": 0.13999999999999999,
-        "jsxgraph_diagram": 0.7271428571428571,
+        "latex_math": 0.33999999999999997,
+        "jsxgraph_diagram": 0.6699999999999999,
         "tavily_image": 0.33333333333333337
       },
-      "recommendations": [],
+      "recommendations": [
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Improve guidance for mathematics scenarios"
+      ],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -162,22 +162,22 @@
         "subject_area": "mathematics",
         "difficulty_level": "college"
       },
-      "overall_score": 0.5485,
+      "overall_score": 0.6305,
       "passed": false,
       "ai_decision_simulation": {
-        "latex_math": 0.13999999999999999,
-        "jsxgraph_diagram": 0.8557142857142856,
+        "latex_math": 0.37,
+        "jsxgraph_diagram": 0.8599999999999999,
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>, <ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices",
         "Improve guidance for mathematics scenarios"
       ],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -223,7 +223,7 @@
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -257,22 +257,22 @@
         "subject_area": "physics",
         "difficulty_level": "high_school"
       },
-      "overall_score": 0.6479999999999999,
+      "overall_score": 0.613,
       "passed": false,
       "ai_decision_simulation": {
-        "latex_math": 0.13999999999999999,
-        "jsxgraph_diagram": 0.5985714285714285,
+        "latex_math": 0.24,
+        "jsxgraph_diagram": 0.5700000000000001,
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
-        "Improve guidance for physics scenarios"
+        "Improve guidance for physics scenarios",
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices"
       ],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -306,22 +306,19 @@
         "subject_area": "chemistry",
         "difficulty_level": "high_school"
       },
-      "overall_score": 0.40950000000000003,
-      "passed": false,
+      "overall_score": 0.7105,
+      "passed": true,
       "ai_decision_simulation": {
-        "latex_math": 0.30000000000000004,
+        "latex_math": 0.7300000000000001,
         "jsxgraph_diagram": 0.47000000000000003,
         "tavily_image": 0.2
       },
-      "recommendations": [
-        "Improve guidance for chemistry scenarios",
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices"
-      ],
+      "recommendations": [],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -367,7 +364,7 @@
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -413,7 +410,7 @@
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -448,22 +445,19 @@
         "subject_area": "mathematics",
         "difficulty_level": "high_school"
       },
-      "overall_score": 0.49849999999999994,
-      "passed": false,
+      "overall_score": 0.716,
+      "passed": true,
       "ai_decision_simulation": {
-        "latex_math": 0.13999999999999999,
-        "jsxgraph_diagram": 0.5985714285714285,
+        "latex_math": 0.6,
+        "jsxgraph_diagram": 0.76,
         "tavily_image": 0.2
       },
-      "recommendations": [
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
-        "Improve guidance for mathematics scenarios"
-      ],
+      "recommendations": [],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
@@ -498,22 +492,22 @@
         "subject_area": "mathematics",
         "difficulty_level": "high_school"
       },
-      "overall_score": 0.4584999999999999,
+      "overall_score": 0.5535,
       "passed": false,
       "ai_decision_simulation": {
-        "latex_math": 0.13999999999999999,
-        "jsxgraph_diagram": 0.5985714285714285,
+        "latex_math": 0.44000000000000006,
+        "jsxgraph_diagram": 0.5700000000000001,
         "tavily_image": 0.33333333333333337
       },
       "recommendations": [
-        "Test scenario expected {<ResourceType.LATEX_MATH: 'latex_math'>, <ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>} but AI simulation suggests different choices",
+        "Test scenario expected {<ResourceType.JSXGRAPH_DIAGRAM: 'jsxgraph_diagram'>, <ResourceType.LATEX_MATH: 'latex_math'>} but AI simulation suggests different choices",
         "Improve guidance for mathematics scenarios"
       ],
       "prompt_analyses": [
         {
           "resource_type": "latex_math",
           "guidance_score": 0.7,
-          "clarity_score": 0.8,
+          "clarity_score": 1.0,
           "coverage_score": 0.8,
           "issues": [],
           "recommendations": []
