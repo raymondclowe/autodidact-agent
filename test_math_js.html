@@ -1,11 +1,21 @@
-"""
-Simple client-side math renderer for basic LaTeX expressions
-as a fallback when MathJax CDN is not available.
-"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Math Renderer Fix</title>
+</head>
+<body>
+    <h1>Testing Math LaTeX Fix</h1>
+    <div id="test-content">
+        <p>The result is (10 \div 2) which equals 5.</p>
+        <p>We calculate (a \times b) and check if (x \ne y).</p>
+        <p>Regular math (10 + 2) should not change.</p>
+    </div>
+    
+    <h2>Test Results:</h2>
+    <div id="results"></div>
 
-MATH_RENDERER_JS = r"""
-<script>
-// Simple math renderer for basic LaTeX expressions
+    <script>
+// Copy the FIXED SimpleMathRenderer code from simple_math_renderer.py
 window.SimpleMathRenderer = {
     // Map of common LaTeX symbols to Unicode
     symbols: {
@@ -122,7 +132,7 @@ window.SimpleMathRenderer = {
     processPage: function(options = {}) {
         const doc = options.context || document;
         const displayStyle = options.displayStyle || 'display: block; text-align: center; margin: 10px 0; font-style: italic; font-weight: bold;';
-        const inlineStyle = options.inlineStyle || 'font-style: italic;';
+        const inlineStyle = options.inlineStyle || 'font-style: italic; color: blue; font-weight: bold;';
         
         console.log('Processing page with SimpleMathRenderer...');
         
@@ -133,7 +143,7 @@ window.SimpleMathRenderer = {
             if (content.includes('[') && content.includes(']')) {
                 // Replace display math expressions
                 content = content.replace(/\[([^[\]]+)\]/g, function(match, expr) {
-                    if (!expr.includes('\\\\')) return match; // Return original if no LaTeX commands
+                    if (!expr.includes('\\')) return match; // Return original if no LaTeX commands
                     let rendered = SimpleMathRenderer.renderExpression(expr);
                     return '<span style="' + displayStyle + '">' + rendered + '</span>';
                 });
@@ -158,13 +168,40 @@ window.SimpleMathRenderer = {
     }
 };
 
-// Auto-process the page when it loads
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() { SimpleMathRenderer.processPage(); }, 100);
-    });
-} else {
-    setTimeout(function() { SimpleMathRenderer.processPage(); }, 100);
+// Test function
+function runTests() {
+    const testDiv = document.getElementById('test-content');
+    const resultsDiv = document.getElementById('results');
+    
+    // Show before
+    resultsDiv.innerHTML = '<h3>Before Processing:</h3><pre>' + testDiv.innerHTML + '</pre>';
+    
+    // Process the math
+    SimpleMathRenderer.processPage();
+    
+    // Show after
+    resultsDiv.innerHTML += '<h3>After Processing:</h3><pre>' + testDiv.innerHTML + '</pre>';
+    
+    // Check if the fix worked
+    const processedContent = testDiv.innerHTML;
+    const hasRenderedDiv = processedContent.includes('÷');
+    const hasRenderedTimes = processedContent.includes('×');
+    const hasRenderedNe = processedContent.includes('≠');
+    
+    resultsDiv.innerHTML += '<h3>Test Results:</h3>';
+    resultsDiv.innerHTML += '<p>' + (hasRenderedDiv ? '✅' : '❌') + ' \\div rendered as ÷</p>';
+    resultsDiv.innerHTML += '<p>' + (hasRenderedTimes ? '✅' : '❌') + ' \\times rendered as ×</p>';
+    resultsDiv.innerHTML += '<p>' + (hasRenderedNe ? '✅' : '❌') + ' \\ne rendered as ≠</p>';
+    
+    if (hasRenderedDiv && hasRenderedTimes && hasRenderedNe) {
+        resultsDiv.innerHTML += '<p style="color: green; font-weight: bold;">🎉 All tests passed! The fix is working!</p>';
+    } else {
+        resultsDiv.innerHTML += '<p style="color: red; font-weight: bold;">❌ Some tests failed. The fix needs more work.</p>';
+    }
 }
-</script>
-"""
+
+// Run tests when page loads
+window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>
