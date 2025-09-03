@@ -701,12 +701,16 @@ def check_token_limits(prompt: str, max_completion_tokens: int = None, model_max
     completion_tokens = max_completion_tokens or (model_max_tokens // 4)  # Default to 25% for completion
     total_tokens = prompt_tokens + completion_tokens
     
+    # Calculate a reasonable recommended completion limit (cap at 8k tokens to prevent excessive requests)
+    available_tokens = max(0, model_max_tokens - prompt_tokens)
+    recommended_max_completion = min(8000, max(0, available_tokens - 1000))  # Cap at 8k tokens, leave 1k buffer
+    
     return {
         'prompt_tokens': prompt_tokens,
         'completion_tokens': completion_tokens,
         'total_tokens': total_tokens,
         'model_max_tokens': model_max_tokens,
         'within_limits': total_tokens <= model_max_tokens,
-        'available_tokens': max(0, model_max_tokens - prompt_tokens),
-        'recommended_max_completion': max(0, model_max_tokens - prompt_tokens - 1000)  # Leave buffer
+        'available_tokens': available_tokens,
+        'recommended_max_completion': recommended_max_completion
     }
