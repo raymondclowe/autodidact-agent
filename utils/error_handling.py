@@ -166,7 +166,8 @@ def parse_openrouter_error(response) -> Optional[Dict]:
     """
     Parse OpenRouter error response to extract meaningful error information.
     
-    OpenRouter error responses have this structure:
+    OpenRouter error responses can have two structures:
+    1. Wrapped provider errors:
     {
         "error": {
             "message": "Provider returned error",
@@ -175,6 +176,15 @@ def parse_openrouter_error(response) -> Optional[Dict]:
                 "raw": "{\"error\":{\"message\":\"...\",\"type\":\"...\",\"code\":...}}",
                 "provider_name": "Perplexity"
             }
+        }
+    }
+    
+    2. Direct OpenRouter errors:
+    {
+        "error": {
+            "message": "This request requires more credits...",
+            "code": 402,
+            "metadata": {"provider_name": None}
         }
     }
     
@@ -195,19 +205,18 @@ def parse_openrouter_error(response) -> Optional[Dict]:
         if not error_dict:
             return None
         
-        # Look for metadata with raw provider error
+        # Look for metadata with raw provider error (wrapped format)
         metadata = error_dict.get('metadata', {})
-        if not metadata:
-            return None
+        if metadata and metadata.get('raw'):
+            provider_name = metadata.get('provider_name', 'Unknown Provider')
+            raw_error = metadata.get('raw', '')
+            return _parse_raw_error(raw_error, provider_name, error_dict)
         
-        provider_name = metadata.get('provider_name', 'Unknown Provider')
-        raw_error = metadata.get('raw', '')
+        # Handle direct OpenRouter errors (like 402 credit errors)
+        elif 'message' in error_dict and 'code' in error_dict:
+            return _parse_direct_error(error_dict, metadata)
         
-        if not raw_error:
-            return None
-        
-        # Parse the raw error JSON
-        return _parse_raw_error(raw_error, provider_name, error_dict)
+        return None
             
     except Exception as e:
         logger.warning(f"Error parsing OpenRouter response: {e}")
@@ -258,6 +267,39 @@ def _parse_raw_error(raw_error: str, provider_name: str, error_dict: Dict) -> Di
         }
 
 
+def _parse_direct_error(error_dict: Dict, metadata: Dict) -> Dict:
+    """Parse direct OpenRouter error (not wrapped in raw JSON)."""
+    error_code = error_dict.get('code', '')
+    error_message = error_dict.get('message', '')
+    provider_name = metadata.get('provider_name') or 'OpenRouter'
+    
+    # Determine error type based on code and message content
+    if error_code == 402:
+        if 'credits' in error_message.lower() and 'max_tokens' in error_message.lower():
+            error_type = 'insufficient_credits'
+        else:
+            error_type = 'payment_required'
+    elif error_code == 429:
+        error_type = 'rate_limit_exceeded'
+    elif error_code == 401:
+        error_type = 'invalid_api_key'
+    elif error_code == 400:
+        if 'token' in error_message.lower():
+            error_type = 'requested_too_many_tokens'
+        else:
+            error_type = 'bad_request'
+    else:
+        error_type = 'unknown'
+    
+    return {
+        'provider_name': provider_name,
+        'error_type': error_type,
+        'error_message': error_message,
+        'error_code': error_code,
+        'raw_error': str(error_dict)
+    }
+
+
 def extract_token_info(error_message: str) -> Optional[Dict]:
     """
     Extract token information from error messages.
@@ -301,6 +343,21 @@ def extract_token_info(error_message: str) -> Optional[Dict]:
             return {
                 'total_requested': total_tokens,
                 'max_limit': max_limit
+            }
+        
+        # Pattern for credit insufficiency errors
+        # "You requested up to 32000 tokens, but can only afford 31399"
+        credit_pattern = re.compile(r'requested up to (\d+) tokens.*can only afford (\d+)', re.IGNORECASE)
+        match = credit_pattern.search(error_message)
+        if match:
+            requested_tokens = int(match.group(1))
+            affordable_tokens = int(match.group(2))
+            
+            return {
+                'requested_tokens': requested_tokens,
+                'affordable_tokens': affordable_tokens,
+                'total_requested': requested_tokens,
+                'shortage': requested_tokens - affordable_tokens
             }
         
         return None
@@ -365,6 +422,44 @@ def create_user_friendly_error_message(error_info: Dict) -> str:
     
     elif error_type == 'model_not_found' or 'model' in error_message.lower():
         return f"🤖 **Model Unavailable**\n\n{provider_name} reports that the requested model is not available.\n\n**Solution:** The model may be temporarily unavailable. Try again later or contact support."
+    
+    elif error_type == 'insufficient_credits':
+        token_info = extract_token_info(error_message)
+        
+        if token_info and 'affordable_tokens' in token_info:
+            requested = token_info.get('requested_tokens', 'unknown')
+            affordable = token_info.get('affordable_tokens', 'unknown')
+            shortage = token_info.get('shortage', 'unknown')
+            
+            message = f"💳 **Insufficient Credits**\n\n"
+            message += f"**Provider:** {provider_name}\n"
+            message += f"**Problem:** Your request requires {requested:,} tokens, but your account can only afford {affordable:,} tokens.\n"
+            message += f"**Shortage:** {shortage:,} tokens\n\n"
+            
+            message += f"**Solutions:**\n"
+            message += f"1. **Add more credits** - Visit {provider_name} settings to add credits to your account\n"
+            message += f"2. **Reduce token usage** - Try requesting fewer hours of content or a more focused topic\n"
+            message += f"3. **Split your request** - Break your learning goal into smaller sessions\n"
+            message += f"4. **Switch providers** - Try using OpenAI instead if you have access\n\n"
+            
+            if 'openrouter.ai/settings/credits' in error_message:
+                message += f"💡 **Quick fix:** Visit https://openrouter.ai/settings/credits to add more credits."
+            
+            return message
+        else:
+            # Fallback for credit errors without token info
+            message = f"💳 **Insufficient Credits**\n\n"
+            message += f"**Provider:** {provider_name}\n"
+            message += f"**Problem:** {error_message}\n\n"
+            message += f"**Solutions:**\n"
+            message += f"1. **Add more credits** - Check your {provider_name} account and add credits\n"
+            message += f"2. **Reduce your request** - Try a smaller or more focused topic\n"
+            message += f"3. **Switch providers** - Try using a different AI provider\n\n"
+            
+            if 'openrouter.ai/settings/credits' in error_message:
+                message += f"💡 **Quick fix:** Visit https://openrouter.ai/settings/credits to add more credits."
+            
+            return message
     
     else:
         # Generic fallback with the actual provider error
@@ -643,7 +738,7 @@ def handle_api_error(response, context: str = "API call") -> Tuple[str, bool]:
         is_retryable = error_type in ['rate_limit_exceeded', 'temporary_unavailable']
         
         # For major errors, create incident file
-        if error_type in ['requested_too_many_tokens', 'insufficient_quota', 'model_not_found']:
+        if error_type in ['requested_too_many_tokens', 'insufficient_quota', 'insufficient_credits', 'model_not_found']:
             additional_info = {"openrouter_error_info": error_info}
             _, _, incident_file = log_major_error(response, context, additional_info)
             if incident_file:
