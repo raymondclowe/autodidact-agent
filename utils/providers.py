@@ -165,7 +165,6 @@ def get_api_call_params(
     messages: list,
     provider: str = None,
     temperature: Optional[float] = None,
-    max_tokens: Optional[int] = None,
     top_p: Optional[float] = None,
     top_k: Optional[int] = None,
     frequency_penalty: Optional[float] = None,
@@ -191,7 +190,6 @@ def get_api_call_params(
         messages: List of messages for the conversation
         provider: Provider name. If None, uses current provider.
         temperature: Sampling temperature (0.0 to 2.0)
-        max_tokens: Maximum tokens to generate
         top_p: Nucleus sampling parameter (0.0 to 1.0)
         top_k: Top-k sampling parameter 
         frequency_penalty: Frequency penalty (-2.0 to 2.0)
@@ -215,6 +213,10 @@ def get_api_call_params(
     if provider is None:
         provider = get_current_provider()
     
+    # Reject max_tokens parameter to ensure default token limits are used
+    if 'max_tokens' in kwargs:
+        raise ValueError("max_tokens parameter is not allowed. Let the AI provider use default token limits.")
+    
     # Start with base parameters
     params = {
         "model": model,
@@ -224,7 +226,6 @@ def get_api_call_params(
     # Add optional parameters if provided
     optional_params = {
         "temperature": temperature,
-        "max_tokens": max_tokens,
         "top_p": top_p,
         "frequency_penalty": frequency_penalty,
         "presence_penalty": presence_penalty,

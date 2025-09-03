@@ -309,8 +309,7 @@ def generate_final_test(
 #                 {"role": "user", "content": prompt}
 #             ],
 #             response_format={"type": "json_object"},
-#             temperature=0.7,
-#             max_tokens=2000
+#             temperature=0.7
 #         )
         
 #         data = json.loads(response.choices[0].message.content)
