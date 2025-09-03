@@ -97,6 +97,7 @@ def get_llm():
                 "model_name": chat_model,
                 "temperature": 0.7,
                 "openai_api_key": api_key,
+                "max_tokens": 4000,  # Reasonable limit for lesson interactions to prevent excessive costs
             }
             
             # Add base_url if provider requires it (e.g., OpenRouter)
