@@ -882,15 +882,15 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                     
                     long_timeout_client = openai.OpenAI(**client_kwargs)
                     
-                    # Calculate safe max_tokens to avoid exceeding model limits
+                    # Pre-flight token check to validate request is reasonable
                     full_prompt = optimized_prompt + "\n\n" + user_message
                     model_max_tokens = get_model_token_limit(research_model, current_provider)
                     token_check = check_token_limits(full_prompt, model_max_tokens=model_max_tokens)
-                    safe_max_tokens = token_check['recommended_max_completion']
                     
-                    logger.info(f"[API CALL] Reason: Perplexity deep research | Model: {research_model} | Provider: {current_provider} | Job ID: {pseudo_job_id} | Max tokens: {safe_max_tokens}")
+                    # Don't set max_tokens explicitly to avoid provider budget issues
+                    logger.info(f"[API CALL] Reason: Perplexity deep research | Model: {research_model} | Provider: {current_provider} | Job ID: {pseudo_job_id} | No max_tokens (letting provider decide)")
                     
-                    # Use get_api_call_params to ensure proper parameter handling
+                    # Use get_api_call_params to ensure proper parameter handling - without max_tokens
                     params = get_api_call_params(
                         model=research_model,
                         messages=[
@@ -898,7 +898,6 @@ def start_deep_research_job(topic: str, hours: Optional[int] = None, oldAttemptS
                             {"role": "user", "content": user_message}
                         ],
                         temperature=0.7,
-                        max_tokens=safe_max_tokens,
                         provider=current_provider
                     )
                     
