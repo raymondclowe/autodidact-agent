@@ -68,7 +68,7 @@ def run_tutor_response(session_info, node_info):
         st.session_state.current_phase = state.get('current_phase', 'teaching')
 
         # Update timestamp and clear interruption flag after successful response
-        from datetime import datetime
+        from datetime import datetime, timezone
         state['last_message_ts'] = datetime.now(timezone.utc).isoformat()
         if state.get('interruption_detected'):
             state['interruption_detected'] = False

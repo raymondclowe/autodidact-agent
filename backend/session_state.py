@@ -6,7 +6,7 @@ Defines the state that flows through the LangGraph nodes
 
 from typing import TypedDict, List, Dict, Optional, Literal
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class Objective(BaseModel):
