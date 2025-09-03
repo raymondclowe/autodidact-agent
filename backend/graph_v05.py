@@ -40,6 +40,7 @@ from backend.db import (
 
 from utils.config import load_api_key
 from utils.providers import create_client, get_model_for_task, get_provider_config, get_current_provider
+from utils.error_handling import handle_api_error
 
 from backend.quiz_generators import (
     generate_final_test
@@ -115,7 +116,13 @@ def get_llm():
             # Test the LLM with a simple call to validate the API key
             llm.invoke([{"role": "user", "content": "test"}])
         except Exception as e:
-            print(f"[get_llm] Failed to initialize LLM: {str(e)}")
+            # Use enhanced error handling for better user experience
+            try:
+                user_message, is_retryable = handle_api_error(e, "LLM initialization")
+                print(f"[get_llm] Failed to initialize LLM: {user_message}")
+            except Exception:
+                # Fallback to original error message if enhanced handling fails
+                print(f"[get_llm] Failed to initialize LLM: {str(e)}")
             llm = None
             return None
             

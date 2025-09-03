@@ -939,8 +939,7 @@
 #                     {"role": "system", "content": "You are an expert grader. Be fair but rigorous."},
 #                     {"role": "user", "content": grading_prompt}
 #                 ],
-#                 temperature=0.2,
-#                 max_tokens=150
+#                 temperature=0.2
 #             )
 #             grading_text = response.choices[0].message.content
 #             model_used = "gpt-4o"
@@ -954,8 +953,7 @@
 #                         {"role": "system", "content": "You are an expert grader. Be fair but rigorous."},
 #                         {"role": "user", "content": grading_prompt}
 #                     ],
-#                     temperature=0.2,
-#                     max_tokens=150
+#                     temperature=0.2
 #                 )
 #                 grading_text = response.choices[0].message.content
 #                 model_used = "gpt-4o-mini"
