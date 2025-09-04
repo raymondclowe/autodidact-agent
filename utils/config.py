@@ -129,11 +129,13 @@ PROVIDER_MODELS = {
     "openrouter": {
         "deep_research": "perplexity/sonar-deep-research",  # Perplexity Sonar Pro Deep Research
         "chat": "anthropic/claude-opus-4.1",  # Updated for better diagram generation
+        "chat_cost_effective": "deepseek/deepseek-chat-v3.1",  # Cost-effective alternative
         "base_url": "https://openrouter.ai/api/v1",
         "token_limits": {
             "perplexity/sonar-deep-research": 102400,  # 80% of 128k published max (conservative)
             "anthropic/claude-opus-4.1": 160000,  # 80% of 200k published max
-            "anthropic/claude-3.5-haiku": 160000  # 80% of 200k published max (legacy)
+            "anthropic/claude-3.5-haiku": 160000,  # 80% of 200k published max (legacy)
+            "deepseek/deepseek-chat-v3.1": 160000  # 80% of 200k published max
         }
     }
 }
@@ -228,6 +230,19 @@ def set_current_provider(provider: str):
     
     config = load_config()
     config["provider"] = provider
+    save_config(config)
+
+
+def get_cost_effective_models_setting() -> bool:
+    """Get the cost-effective models setting"""
+    config = load_config()
+    return config.get("use_cost_effective_models", False)
+
+
+def set_cost_effective_models_setting(enabled: bool):
+    """Set the cost-effective models setting"""
+    config = load_config()
+    config["use_cost_effective_models"] = enabled
     save_config(config)
 
 

@@ -6,7 +6,8 @@ Manage API keys and provider configuration
 import streamlit as st
 from utils.config import (
     load_api_key, save_api_key, CONFIG_FILE, get_current_provider,
-    set_current_provider, SUPPORTED_PROVIDERS, load_tavily_api_key, save_tavily_api_key
+    set_current_provider, SUPPORTED_PROVIDERS, load_tavily_api_key, save_tavily_api_key,
+    get_cost_effective_models_setting, set_cost_effective_models_setting
 )
 from utils.providers import validate_api_key, get_provider_info, list_available_models
 from pathlib import Path
@@ -61,6 +62,53 @@ with col2:
             st.code(f"{task}: {model}")
     except Exception as e:
         st.warning(f"Could not load models: {e}")
+
+# Model preferences section (only show for OpenRouter)
+if current_provider == "openrouter":
+    st.markdown("---")
+    st.markdown("### 💰 Model Preferences")
+    
+    cost_effective_enabled = get_cost_effective_models_setting()
+    
+    new_cost_effective = st.toggle(
+        "Use Cost-Effective Models",
+        value=cost_effective_enabled,
+        help="Switch to more affordable models when available (e.g., DeepSeek instead of Claude 4.1 for chat)"
+    )
+    
+    if new_cost_effective != cost_effective_enabled:
+        set_cost_effective_models_setting(new_cost_effective)
+        if new_cost_effective:
+            st.success("✅ Switched to cost-effective models! Chat will now use DeepSeek instead of Claude 4.1.")
+        else:
+            st.success("✅ Switched to premium models! Chat will use Claude 4.1.")
+        st.rerun()
+    
+    # Show cost comparison
+    if current_provider == "openrouter":
+        with st.expander("💡 Cost Comparison"):
+            if cost_effective_enabled:
+                st.markdown("""
+                **Current Configuration (Cost-Effective):**
+                - Chat: `deepseek/deepseek-chat-v3.1` (~$0.001-0.003 per request)
+                - Deep Research: `perplexity/sonar-deep-research` (~$0.01-0.05 per request)
+                
+                **Premium Configuration:**
+                - Chat: `anthropic/claude-opus-4.1` (~$0.05-0.20 per request)
+                - Deep Research: `perplexity/sonar-deep-research` (~$0.01-0.05 per request)
+                """)
+            else:
+                st.markdown("""
+                **Current Configuration (Premium):**
+                - Chat: `anthropic/claude-opus-4.1` (~$0.05-0.20 per request)
+                - Deep Research: `perplexity/sonar-deep-research` (~$0.01-0.05 per request)
+                
+                **Cost-Effective Configuration:**
+                - Chat: `deepseek/deepseek-chat-v3.1` (~$0.001-0.003 per request)
+                - Deep Research: `perplexity/sonar-deep-research` (~$0.01-0.05 per request)
+                """)
+            
+            st.info("💡 **Tip**: DeepSeek v3.1 offers excellent performance at a fraction of the cost of Claude 4.1, making it ideal for learning and experimentation.")
 
 st.markdown("---")
 

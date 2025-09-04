@@ -83,6 +83,16 @@ def get_model_for_task(task: str, provider: str = None) -> str:
     
     config = get_provider_config(provider)
     
+    # Check for cost-effective model override
+    from utils.config import get_cost_effective_models_setting
+    use_cost_effective = get_cost_effective_models_setting()
+    
+    # For chat task, check if cost-effective alternative exists and is enabled
+    if task == "chat" and use_cost_effective:
+        cost_effective_key = f"{task}_cost_effective"
+        if cost_effective_key in config:
+            return config[cost_effective_key]
+    
     if task not in config:
         raise ProviderError(f"Task '{task}' not supported for provider '{provider}'")
     
@@ -288,13 +298,34 @@ def list_available_models(provider: str = None) -> Dict:
         provider: Provider name. If None, uses current provider.
         
     Returns:
-        Dictionary of available models by task
+        Dictionary of available models by task (showing effective models based on settings)
     """
     if provider is None:
         provider = get_current_provider()
     
     config = get_provider_config(provider)
-    return {task: model for task, model in config.items() if task != "base_url"}
+    
+    # Get the effective models considering cost-effective setting
+    from utils.config import get_cost_effective_models_setting
+    use_cost_effective = get_cost_effective_models_setting()
+    
+    effective_models = {}
+    for task, model in config.items():
+        if task in ["base_url", "token_limits"]:
+            continue
+        if task.endswith("_cost_effective"):
+            continue  # Skip the cost-effective variants in the listing
+            
+        # Use cost-effective model if available and enabled
+        if task == "chat" and use_cost_effective:
+            cost_effective_key = f"{task}_cost_effective"
+            if cost_effective_key in config:
+                effective_models[task] = config[cost_effective_key]
+                continue
+        
+        effective_models[task] = model
+    
+    return effective_models
 
 
 def is_diagram_capable_model(model: str) -> bool:
