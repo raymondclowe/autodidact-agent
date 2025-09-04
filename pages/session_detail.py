@@ -220,7 +220,10 @@ else:
 if 'graph_state' not in st.session_state:
     st.session_state.graph_state = state
 
-# Session control buttons
+# Initialize chat history from session state if resuming, or empty if new session
+if "history" not in st.session_state:
+    # Restore chat history from saved session state or start with empty
+    st.session_state.history = state.get('history', [])
 with st.container():
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -250,24 +253,31 @@ with st.container():
 if not is_completed:
     st.info("💾 **Your progress is automatically saved** - you can safely pause and return to this session anytime!")
 
-# Initialize chat history
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-# Display chat messages from history on app rerun
+# Session control buttons
 from components.rich_content_renderer import render_rich_content
 from components.lesson_intro import display_lesson_introduction, should_show_lesson_intro
-from components.lesson_progress import display_lesson_progress_sidebar, should_show_progress_tracking
+from components.lesson_progress import display_lesson_progress_sidebar, display_lesson_progress_compact, should_show_progress_tracking
 
 # Display lesson introduction at session start
 if not is_completed and st.session_state.get('graph_state'):
     if should_show_lesson_intro(st.session_state.graph_state):
         display_lesson_introduction(st.session_state.graph_state, node_info)
 
-# Display progress tracking in sidebar if session is active
+# Display progress tracking both in sidebar and main area for mobile accessibility
 if not is_completed and st.session_state.get('graph_state'):
     if should_show_progress_tracking(st.session_state.graph_state):
+        # Mobile-friendly compact progress indicator in main area
+        display_lesson_progress_compact(st.session_state.graph_state)
+        # Detailed progress in sidebar for desktop users
         display_lesson_progress_sidebar(st.session_state.graph_state)
+    elif len(st.session_state.get('history', [])) > 0:
+        # Fallback: Show basic progress for active sessions using node info
+        node_objectives = node_info.get('learning_objectives', [])
+        if len(node_objectives) > 0:
+            # Show progress based on node objectives when session state isn't ready
+            with st.container():
+                st.markdown(f"**📊 Learning {len(node_objectives)} objectives in this session**")
+                st.info("🎯 Detailed progress tracking will appear as you advance through the lesson")
 
 for message in st.session_state.history:
     with st.chat_message(message["role"]):

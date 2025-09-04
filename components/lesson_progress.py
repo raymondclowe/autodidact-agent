@@ -90,6 +90,34 @@ def display_objective_completion_celebration(objective_description: str) -> None
     st.success(f"🎉 **Objective Completed!** \n\n✅ {objective_description}")
     
 
+def display_lesson_progress_compact(session_state: SessionState) -> None:
+    """
+    Display a very compact mobile-friendly progress indicator
+    
+    Args:
+        session_state: Current session state containing progress information
+    """
+    progress_info = get_objectives_progress_info(session_state)
+    
+    # If no objectives in session state, try to show a basic progress indicator
+    if not progress_info["items"]:
+        # Check if we have any history to show that session is active
+        history = session_state.get("history", [])
+        if len(history) > 0:
+            # Show generic progress indicator
+            st.markdown("**📊 Learning session in progress...**")
+            st.info("💡 Progress tracking will appear once objectives are loaded")
+        return
+    
+    # Compact single-line progress indicator perfect for mobile
+    progress_text = f"📊 {progress_info['completed_count']} out of {progress_info['total']} objectives completed"
+    progress_percentage = (progress_info["completed_count"] / progress_info["total"]) * 100
+    
+    with st.container():
+        st.markdown(f"**{progress_text}**")
+        st.progress(progress_percentage / 100)
+
+
 def should_show_progress_tracking(session_state: SessionState) -> bool:
     """
     Determine if progress tracking should be shown
@@ -102,6 +130,12 @@ def should_show_progress_tracking(session_state: SessionState) -> bool:
     """
     objectives = session_state.get("objectives_to_teach", [])
     current_phase = session_state.get("current_phase", "")
+    history = session_state.get("history", [])
     
-    # Show progress if we have objectives and are in teaching phase
-    return len(objectives) > 0 and current_phase in ["teaching", "final_test"]
+    # Show progress if we have objectives and are in active teaching phases
+    # Also show if we have chat history (session is active) and not in intro phase
+    has_objectives = len(objectives) > 0
+    is_teaching_phase = current_phase in ["teaching", "final_test"]
+    has_active_session = len(history) > 0 and current_phase != "intro"
+    
+    return has_objectives and (is_teaching_phase or has_active_session)
