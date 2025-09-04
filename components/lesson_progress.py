@@ -90,6 +90,27 @@ def display_objective_completion_celebration(objective_description: str) -> None
     st.success(f"🎉 **Objective Completed!** \n\n✅ {objective_description}")
     
 
+def display_lesson_progress_compact(session_state: SessionState) -> None:
+    """
+    Display a very compact mobile-friendly progress indicator
+    
+    Args:
+        session_state: Current session state containing progress information
+    """
+    progress_info = get_objectives_progress_info(session_state)
+    
+    if not progress_info["items"]:
+        return
+    
+    # Compact single-line progress indicator perfect for mobile
+    progress_text = f"📊 {progress_info['completed_count']} out of {progress_info['total']} objectives completed"
+    progress_percentage = (progress_info["completed_count"] / progress_info["total"]) * 100
+    
+    with st.container():
+        st.markdown(f"**{progress_text}**")
+        st.progress(progress_percentage / 100)
+
+
 def should_show_progress_tracking(session_state: SessionState) -> bool:
     """
     Determine if progress tracking should be shown
