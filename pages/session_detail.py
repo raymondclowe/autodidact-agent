@@ -270,6 +270,14 @@ if not is_completed and st.session_state.get('graph_state'):
         display_lesson_progress_compact(st.session_state.graph_state)
         # Detailed progress in sidebar for desktop users
         display_lesson_progress_sidebar(st.session_state.graph_state)
+    elif len(st.session_state.get('history', [])) > 0:
+        # Fallback: Show basic progress for active sessions using node info
+        node_objectives = node_info.get('learning_objectives', [])
+        if len(node_objectives) > 0:
+            # Show progress based on node objectives when session state isn't ready
+            with st.container():
+                st.markdown(f"**📊 Learning {len(node_objectives)} objectives in this session**")
+                st.info("🎯 Detailed progress tracking will appear as you advance through the lesson")
 
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
